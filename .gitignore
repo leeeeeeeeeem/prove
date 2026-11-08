@@ -1,0 +1,6 @@
+target/
+vm/images/
+vm/run/
+results/
+*.swp
+.DS_Store
