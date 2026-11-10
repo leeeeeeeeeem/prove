@@ -1,0 +1,11 @@
+[package]
+name = "provectl"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prove-common = { path = "../prove-common", features = ["user"] }
+anyhow = { workspace = true }
+aya = { workspace = true }
+nix = { workspace = true }

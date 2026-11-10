@@ -4,7 +4,8 @@
 #
 # Input devices exposed as "physical" hardware (SPEC section 4, see docs/DEVIATIONS.md for the
 # PS/2 substitution on arm64): usb-kbd, usb-tablet, virtio-keyboard-pci, and a second usb-kbd on
-# its own xHCI controller.
+# its own xHCI controller. hp0/hp1 are empty PCIe ports for hot-plug tests
+# (e.g. vm/qmp.py plug virtio-keyboard-pci k1 bus=hp0).
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 mkdir -p "$RUN_DIR"
@@ -38,6 +39,7 @@ qemu-system-aarch64 \
     -device virtio-keyboard-pci,id=viokbd0 \
     -device qemu-xhci,id=xhci1 \
     -device usb-kbd,bus=xhci1.0,id=usbkbd1 \
+    -device pcie-root-port,id=hp0,chassis=1 -device pcie-root-port,id=hp1,chassis=2 \
     -qmp unix:"$QMP_SOCK",server=on,wait=off \
     -serial file:"$SERIAL_LOG" \
     "${display[@]}" \

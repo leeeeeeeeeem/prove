@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["prove-common", "prove-ebpf", "provd", "provectl"]
+default-members = ["prove-common", "provd", "provectl"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "GPL-2.0-only OR MIT"
+
+[workspace.dependencies]
+aya = { version = "0.14.0", default-features = false }
+aya-build = { version = "0.2.0", default-features = false }
+aya-ebpf = { version = "0.2.1", default-features = false }
+
+anyhow = "1"
+cargo_metadata = { version = "0.23.0", default-features = false }
+btf-rs = "2"
+nix = { version = "0.30", features = ["poll", "signal", "fs", "user", "socket", "process", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+signal-hook = "0.3"
+toml = "0.8"
+which = { version = "6.0.0", default-features = false }
+
+[profile.release.package.prove-ebpf]
+debug = 2
+codegen-units = 1
+strip = false

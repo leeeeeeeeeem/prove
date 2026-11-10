@@ -1,0 +1,24 @@
+[package]
+name = "provd"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prove-common = { path = "../prove-common", features = ["user"] }
+anyhow = { workspace = true }
+aya = { workspace = true }
+btf-rs = { workspace = true }
+nix = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+signal-hook = { workspace = true }
+toml = { workspace = true }
+
+[build-dependencies]
+anyhow = { workspace = true }
+aya-build = { workspace = true }
+cargo_metadata = { workspace = true }
+# Not a real dependency: teaches cargo to rebuild provd when the eBPF crate changes.
+prove-ebpf = { path = "../prove-ebpf" }

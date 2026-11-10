@@ -1,0 +1,5 @@
+# Userspace builds with this stable toolchain. The eBPF crate is built by provd/build.rs with
+# the nightly named in provd/build.rs (needs rust-src and bpf-linker); see scripts/setup-vm.sh.
+[toolchain]
+channel = "1.100.0"
+components = ["clippy", "rustfmt"]
