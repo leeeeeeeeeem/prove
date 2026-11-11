@@ -1,0 +1,11 @@
+[package]
+name = "prove-requester-demo"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+prove-common = { path = "../prove-common", features = ["user"] }
+anyhow = { workspace = true }
+getrandom = { workspace = true }
+serde_json = { workspace = true }

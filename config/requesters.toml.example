@@ -1,0 +1,7 @@
+# /etc/prove/requesters.toml: executables that may ask provd for a consent prompt.
+# Same verification as allow-inject.toml. `flags` is unused here.
+#
+# [[requester]]
+# name   = "prove-requester-demo"
+# path   = "/usr/bin/prove-requester-demo"
+# sha256 = "<output of: sha256sum /usr/bin/prove-requester-demo>"

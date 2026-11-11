@@ -3,6 +3,7 @@
 mod allowlist;
 mod audit;
 mod bpf;
+mod consent;
 mod journal;
 mod offsets;
 
@@ -10,14 +11,14 @@ use std::{
     fs,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex, RwLock},
     thread,
 };
 
 use anyhow::{Context as _, Result, bail};
 use prove_common::{
     Creator, DeviceRecord, class, mode,
-    user::{ETC_DIR, PID_FILE, RUN_DIR, exe, maps, sysfs},
+    user::{CONSENT_SOCK, ETC_DIR, PID_FILE, RUN_DIR, exe, maps, sysfs},
 };
 use serde::Deserialize;
 use signal_hook::{
@@ -34,6 +35,8 @@ struct DaemonConfig {
     mode: String,
     allow_inject: PathBuf,
     requesters: PathBuf,
+    consent_helper: PathBuf,
+    consent_timeout_ms: u64,
 }
 
 impl Default for DaemonConfig {
@@ -42,6 +45,8 @@ impl Default for DaemonConfig {
             mode: "audit".into(),
             allow_inject: Path::new(ETC_DIR).join("allow-inject.toml"),
             requesters: Path::new(ETC_DIR).join("requesters.toml"),
+            consent_helper: "/usr/libexec/prove/prove-consent".into(),
+            consent_timeout_ms: 30_000,
         }
     }
 }
@@ -167,7 +172,7 @@ fn main() -> Result<()> {
     set_mode(wanted_mode)?;
     journal.info(&format!("mode: {}", cfg.mode));
 
-    // 6. Runtime directory, audit reader.
+    // 6. Runtime directory, audit reader, consent socket.
     fs::create_dir_all(RUN_DIR)?;
     fs::set_permissions(RUN_DIR, fs::Permissions::from_mode(0o755))?;
     fs::write(PID_FILE, format!("{}\n", std::process::id()))?;
@@ -177,6 +182,22 @@ fn main() -> Result<()> {
         thread::Builder::new().name("audit".into()).spawn(move || {
             if let Err(e) = audit::run(lists, journal.clone()) {
                 journal.warn(&format!("audit reader stopped: {e:#}"));
+            }
+        })?;
+    }
+
+    {
+        let consent = Arc::new(consent::Consent {
+            lists: lists.clone(),
+            journal: journal.clone(),
+            helper: cfg.consent_helper.clone(),
+            timeout_ms: cfg.consent_timeout_ms.clamp(1_000, 300_000),
+            busy: Mutex::new(()),
+        });
+        let journal = journal.clone();
+        thread::Builder::new().name("consent-listener".into()).spawn(move || {
+            if let Err(e) = consent.serve() {
+                journal.warn(&format!("consent socket unavailable: {e:#}"));
             }
         })?;
     }
@@ -194,6 +215,7 @@ fn main() -> Result<()> {
     }
     // Pinned programs and maps stay: enforcement outlives the daemon.
     let _ = fs::remove_file(PID_FILE);
+    let _ = fs::remove_file(CONSENT_SOCK);
     journal.info("provd exiting; pinned enforcement remains active");
     Ok(())
 }

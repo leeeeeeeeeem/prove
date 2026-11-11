@@ -1,0 +1,18 @@
+# /etc/prove/allow-inject.toml: executables that may create uinput devices and write to them.
+#
+# An entry is accepted only if the file and all of its parent directories are owned by root
+# and not writable by group or others, and the SHA-256 matches. Rejected entries are logged
+# (journalctl -t prove) and ignored. Reload with `provectl reload`.
+#
+# Identity is the executable file itself. For interpreted tools that is the interpreter
+# (e.g. /usr/bin/python3), which would allow every script; do not list interpreters.
+#
+# flags:
+#   "inject"     may create uinput devices and write events
+#   "assistive"  additionally, its uinput device may satisfy an assistive-mode consent prompt
+#
+# [[tool]]
+# name   = "keyd"
+# path   = "/usr/bin/keyd"
+# sha256 = "<output of: sha256sum /usr/bin/keyd>"
+# flags  = ["inject", "assistive"]

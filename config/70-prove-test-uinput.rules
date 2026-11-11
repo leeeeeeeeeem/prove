@@ -1,0 +1,5 @@
+# TEST VM ONLY. Gives the logged-in desktop user access to /dev/uinput and /dev/uhid, as
+# Steam and remapper packages do on real desktops. This is the precondition of the attack
+# PROVE defends against (SPEC section 3), not part of PROVE itself.
+KERNEL=="uinput", SUBSYSTEM=="misc", MODE="0660", GROUP="prove-attacker", TAG+="uaccess", OPTIONS+="static_node=uinput"
+KERNEL=="uhid", SUBSYSTEM=="misc", MODE="0660", GROUP="prove-attacker", TAG+="uaccess", OPTIONS+="static_node=uhid"

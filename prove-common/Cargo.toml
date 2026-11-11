@@ -6,8 +6,11 @@ license.workspace = true
 
 [features]
 default = []
-user = ["dep:aya", "dep:anyhow"]
+user = ["dep:aya", "dep:anyhow", "dep:serde", "dep:serde_json", "dep:sha2"]
 
 [dependencies]
 aya = { workspace = true, optional = true }
 anyhow = { workspace = true, optional = true }
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }

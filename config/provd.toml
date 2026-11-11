@@ -1,0 +1,12 @@
+# /etc/prove/provd.toml: provd configuration. All keys are optional; defaults shown.
+
+# "audit": non-allow-listed injection is logged but permitted (default after install).
+# "enforce": it is denied with EPERM.
+mode = "audit"
+
+allow_inject = "/etc/prove/allow-inject.toml"
+requesters = "/etc/prove/requesters.toml"
+
+consent_helper = "/usr/libexec/prove/prove-consent"
+# How long a consent prompt waits for the challenge key.
+consent_timeout_ms = 30000

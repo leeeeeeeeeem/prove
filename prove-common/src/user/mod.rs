@@ -2,6 +2,7 @@
 
 pub mod exe;
 pub mod maps;
+pub mod proto;
 pub mod sysfs;
 
 use crate::{AllowEntry, AuditEvent, Config, Creator, DeviceRecord, ExeId, GrabRecord, Offsets};
