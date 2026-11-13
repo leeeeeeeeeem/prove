@@ -51,3 +51,11 @@ impl Journal {
         self.send(4, message, &[("PROVE_EVENT", "daemon".to_string())]);
     }
 }
+
+/// Tell systemd (Type=notify) that start-up is complete. No-op outside systemd.
+pub fn notify_ready() {
+    let Some(path) = std::env::var_os("NOTIFY_SOCKET") else { return };
+    if let Ok(sock) = UnixDatagram::unbound() {
+        let _ = sock.send_to(b"READY=1", path);
+    }
+}

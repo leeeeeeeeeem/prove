@@ -106,17 +106,21 @@ fn pick_key() -> Result<&'static ChallengeKey> {
 }
 
 impl Consent {
-    pub fn serve(self: Arc<Self>) -> Result<()> {
+    /// Create the consent socket. Done before start-up is reported as complete.
+    pub fn bind() -> Result<UnixListener> {
         let _ = std::fs::remove_file(CONSENT_SOCK);
         let listener = UnixListener::bind(CONSENT_SOCK).context("binding consent socket")?;
         // Authentication is by peer identity, not by file permission.
         std::fs::set_permissions(CONSENT_SOCK, std::fs::Permissions::from_mode(0o666))?;
+        Ok(listener)
+    }
+
+    pub fn serve(self: Arc<Self>, listener: UnixListener) {
         for stream in listener.incoming() {
             let Ok(stream) = stream else { continue };
             let this = self.clone();
             let _ = thread::Builder::new().name("consent".into()).spawn(move || this.handle(stream));
         }
-        Ok(())
     }
 
     fn log(&self, priority: u8, message: &str, verdict: &str, peer: Option<&Peer>) {

@@ -2,10 +2,12 @@
 """Create a uinput keyboard with raw ioctls, optionally press keys, keep it alive.
 
 usage: uinput_kbd.py [--name NAME] [--vendor 0x..] [--product 0x..] [--bus N] [--hold SECONDS]
-                     [--key EV_KEY_CODE ...] [--legacy]
+                     [--key EV_KEY_CODE ...] [--legacy] [--interactive]
 Prints "created" once UI_DEV_CREATE succeeded, then "wrote" after the key events.
 On failure prints "<step> <ERRNO>" (step is open, setup, create or write) and exits 1.
 --legacy configures the device through the old write() path instead of UI_DEV_SETUP.
+--interactive keeps the device until stdin closes; every line read from stdin is a key code
+to press, answered with "wrote" or "write <ERRNO>".
 """
 import argparse, errno, fcntl, os, struct, sys, time
 
@@ -20,6 +22,12 @@ def fail(step, e):
 def event(etype, code, value):
     return struct.pack("<qqHHi", 0, 0, etype, code, value)
 
+def press(fd, code):
+    os.write(fd, event(EV_KEY, code, 1) + event(EV_SYN, 0, 0))
+    time.sleep(0.02)
+    os.write(fd, event(EV_KEY, code, 0) + event(EV_SYN, 0, 0))
+    time.sleep(0.02)
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--name", default="prove-test-uinput")
@@ -29,6 +37,7 @@ def main():
     ap.add_argument("--hold", type=float, default=2.0)
     ap.add_argument("--key", type=lambda s: int(s, 0), action="append", default=[])
     ap.add_argument("--legacy", action="store_true")
+    ap.add_argument("--interactive", action="store_true")
     a = ap.parse_args()
     try:
         fd = os.open("/dev/uinput", os.O_WRONLY)
@@ -51,14 +60,20 @@ def main():
         fcntl.ioctl(fd, UI_DEV_CREATE)
     except OSError as e:
         fail("create", e)
-    print("created", flush=True)
+    print("created", os.getpid(), flush=True)
     time.sleep(0.5)
+    if a.interactive:
+        for line in sys.stdin:
+            try:
+                press(fd, int(line))
+                print("wrote", flush=True)
+            except OSError as e:
+                print("write", errno.errorcode.get(e.errno, str(e.errno)), flush=True)
+        fcntl.ioctl(fd, UI_DEV_DESTROY)
+        return
     try:
         for code in a.key:
-            os.write(fd, event(EV_KEY, code, 1) + event(EV_SYN, 0, 0))
-            time.sleep(0.02)
-            os.write(fd, event(EV_KEY, code, 0) + event(EV_SYN, 0, 0))
-            time.sleep(0.02)
+            press(fd, code)
     except OSError as e:
         fail("write", e)
     if a.key:

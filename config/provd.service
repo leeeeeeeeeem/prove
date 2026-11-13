@@ -9,7 +9,8 @@ Before=display-manager.service keyd.service sysinit.target
 ConditionPathExists=/sys/kernel/btf/vmlinux
 
 [Service]
-Type=simple
+Type=notify
+NotifyAccess=main
 ExecStart=/usr/bin/provd
 ExecReload=/bin/kill -HUP $MAINPID
 Restart=on-failure

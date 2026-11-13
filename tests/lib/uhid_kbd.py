@@ -39,7 +39,7 @@ def main():
     except OSError as e:
         print(errno.errorcode.get(e.errno, str(e.errno)))
         sys.exit(1)
-    print("created", flush=True)
+    print("created", os.getpid(), flush=True)
     time.sleep(0.5)
     for usage in a.key:
         os.write(fd, input2(bytes([0, 0, usage, 0, 0, 0, 0, 0])))

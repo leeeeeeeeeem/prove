@@ -194,13 +194,17 @@ fn main() -> Result<()> {
             timeout_ms: cfg.consent_timeout_ms.clamp(1_000, 300_000),
             busy: Mutex::new(()),
         });
-        let journal = journal.clone();
-        thread::Builder::new().name("consent-listener".into()).spawn(move || {
-            if let Err(e) = consent.serve() {
-                journal.warn(&format!("consent socket unavailable: {e:#}"));
+        // Without the socket there is no consent, which fails closed; enforcement still runs.
+        match consent::Consent::bind() {
+            Ok(listener) => {
+                thread::Builder::new()
+                    .name("consent-listener".into())
+                    .spawn(move || consent.serve(listener))?;
             }
-        })?;
+            Err(e) => journal.warn(&format!("consent socket unavailable: {e:#}")),
+        }
     }
+    journal::notify_ready();
 
     let mut signals = Signals::new([SIGHUP, SIGTERM, SIGINT])?;
     for sig in signals.forever() {
