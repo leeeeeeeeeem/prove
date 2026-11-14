@@ -8,7 +8,7 @@
 # (e.g. /usr/bin/python3), which would allow every script; do not list interpreters.
 #
 # flags:
-#   "inject"     may create uinput devices and write events
+#   "inject"     may create uinput devices and write events, and may write to /dev/uhid
 #   "assistive"  additionally, its uinput device may satisfy an assistive-mode consent prompt
 #
 # [[tool]]
@@ -16,3 +16,12 @@
 # path   = "/usr/bin/keyd"
 # sha256 = "<output of: sha256sum /usr/bin/keyd>"
 # flags  = ["inject", "assistive"]
+#
+# Bluetooth HID devices are created by bluetoothd through /dev/uhid (HOGP), so it must be
+# listed on systems that use Bluetooth keyboards or mice:
+#
+# [[tool]]
+# name   = "bluetoothd"
+# path   = "/usr/libexec/bluetooth/bluetoothd"
+# sha256 = "<output of: sha256sum /usr/libexec/bluetooth/bluetoothd>"
+# flags  = ["inject"]

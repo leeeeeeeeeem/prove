@@ -26,6 +26,9 @@ use crate::{
 /// (input -> hid -> uhid misc device).
 const MAX_ANCESTORS: usize = 6;
 
+const EV_KEY: u32 = 1;
+const EV_ABS: u32 = 3;
+
 fn emit(kind: u32, class: u32, verdict: u32, rdev: u32, device: u64, actor: Creator) {
     let ev = AuditEvent { kind, class, verdict, rdev, device, ts_ns: sys::now_ns(), actor };
     // A full ring buffer drops the event; enforcement never depends on it.
@@ -139,20 +142,35 @@ pub fn release(ctx: FEntryContext) -> i32 {
     0
 }
 
+/// S2: count events injected into a device through an evdev write. uinput writes do not
+/// pass here (they use input_event()), so this counts injection into existing devices only.
+#[fentry(function = "input_inject_event")]
+pub fn inject_count(ctx: FEntryContext) -> i32 {
+    // void input_inject_event(struct input_handle *handle, unsigned int type, ...)
+    let kind = ctx.int(1) as u32;
+    if !(EV_KEY..=EV_ABS).contains(&kind) || !sys::current_is_user() {
+        return 0;
+    }
+    if let Some(n) = sys::input_number(sys::handle_input_dev(ctx.ptr(0))) {
+        sys::bump_inject_count(n);
+    }
+    0
+}
+
 // ---- enforcement -----------------------------------------------------------------------
 
 /// Allow-list check for the current task. Returns the LSM verdict.
 #[inline(always)]
-fn check_inject(kind: u32, rdev: u32) -> i32 {
+fn check_inject(kind: u32, class: u32, rdev: u32) -> i32 {
     let actor = sys::current_creator();
     if sys::allow_flags(&actor.exe) & allow::INJECT != 0 {
         return 0;
     }
     if sys::enforce() {
-        emit(kind, class::UINPUT, verdict::DENIED, rdev, NO_DEVICE, actor);
+        emit(kind, class, verdict::DENIED, rdev, NO_DEVICE, actor);
         -EPERM
     } else {
-        emit(kind, class::UINPUT, verdict::AUDIT_ONLY, rdev, NO_DEVICE, actor);
+        emit(kind, class, verdict::AUDIT_ONLY, rdev, NO_DEVICE, actor);
         0
     }
 }
@@ -166,7 +184,7 @@ fn ioctl_guard(ctx: &LsmContext) -> i32 {
     if sys::file_chr_rdev(ctx.ptr(0)) != Some(UINPUT_RDEV) {
         return 0;
     }
-    let ret = check_inject(event::DENIED_CREATE, UINPUT_RDEV);
+    let ret = check_inject(event::DENIED_CREATE, class::UINPUT, UINPUT_RDEV);
     if ret == 0 {
         let _ = CREATE_INFLIGHT.insert(&sys::pid_tgid(), &sys::now_ns(), 0);
     }
@@ -190,8 +208,10 @@ pub fn write_guard(ctx: LsmContext) -> i32 {
     if ctx.int(1) as u32 & MAY_WRITE == 0 {
         return 0;
     }
+    // uinput: events and legacy set-up. uhid (S1): UHID_CREATE2 and input reports are writes.
     match sys::file_chr_rdev(ctx.ptr(0)) {
-        Some(UINPUT_RDEV) => check_inject(event::DENIED_WRITE, UINPUT_RDEV),
+        Some(UINPUT_RDEV) => check_inject(event::DENIED_WRITE, class::UINPUT, UINPUT_RDEV),
+        Some(UHID_RDEV) => check_inject(event::DENIED_WRITE, class::UHID, UHID_RDEV),
         _ => 0,
     }
 }

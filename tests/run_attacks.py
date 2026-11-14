@@ -19,7 +19,7 @@ def load_cases():
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
         cases.append(mod)
-    order = lambda m: ("APR".index(m.ID[0]) if m.ID[0] in "APR" else 9, int("".join(c for c in m.ID.split("/")[0] if c.isdigit()) or 0))
+    order = lambda m: ("APSR".index(m.ID[0]), int("".join(c for c in m.ID.split("/")[0] if c.isdigit()) or 0))
     return sorted(cases, key=order)
 
 def main():

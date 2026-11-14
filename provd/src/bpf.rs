@@ -34,6 +34,7 @@ const PROGRAMS: &[(&str, Kind, bool)] = &[
     ("grab", Kind::FExit("input_grab_device"), true),
     ("release", Kind::FEntry("input_release_device"), true),
     // hid.ko may be absent; then there are no HID devices to attribute either.
+    ("inject_count", Kind::FEntry("input_inject_event"), true),
     ("hid_alloc", Kind::KProbe("hid_allocate_device"), false),
     ("hid_destroy", Kind::KProbe("hid_destroy_device"), false),
     ("ioctl_guard_native", Kind::Lsm("file_ioctl"), true),

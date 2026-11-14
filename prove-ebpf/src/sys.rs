@@ -222,6 +222,25 @@ pub fn device_class(n: u64) -> Option<u32> {
     unsafe { DEVICES.get(&n) }.map(|r: &DeviceRecord| r.class)
 }
 
+/// Increment `inject_count` of device `n`, if it has a record. The update is not atomic
+/// (the BPF target has no 64-bit atomics in `core`); a lost update under concurrent
+/// injection still leaves the counter larger than any earlier snapshot, which is all the
+/// consent helper relies on.
+#[inline(always)]
+pub fn bump_inject_count(n: u64) {
+    if let Some(rec) = DEVICES.get_ptr_mut(&n) {
+        // SAFETY: the pointer is a live, properly aligned map value.
+        unsafe { (*rec).inject_count = (*rec).inject_count.wrapping_add(1) };
+    }
+}
+
+/// True if the current task has a userspace address space (i.e. is not a kernel thread).
+#[inline(always)]
+pub fn current_is_user() -> bool {
+    let task = unsafe { bpf_get_current_task() };
+    read_ptr(task + off!(task_mm)) != 0
+}
+
 #[inline(always)]
 pub fn hid_creator(hid: u64) -> Option<Creator> {
     unsafe { HID_CREATORS.get(&hid) }.copied()

@@ -11,7 +11,7 @@ pub mod user;
 
 /// Bumped whenever a map layout or program set changes. `provd` refuses to reuse pins
 /// whose `Config::abi` differs.
-pub const ABI_VERSION: u32 = 1;
+pub const ABI_VERSION: u32 = 2;
 
 /// Directory in bpffs holding every pinned program, link and map.
 pub const PIN_DIR: &str = "/sys/fs/bpf/prove";

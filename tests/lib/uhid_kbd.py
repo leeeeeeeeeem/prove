@@ -37,7 +37,7 @@ def main():
         fd = os.open("/dev/uhid", os.O_RDWR)
         os.write(fd, create2(a.name, a.bus, a.vendor, a.product))
     except OSError as e:
-        print(errno.errorcode.get(e.errno, str(e.errno)))
+        print("create", errno.errorcode.get(e.errno, str(e.errno)), flush=True)
         sys.exit(1)
     print("created", os.getpid(), flush=True)
     time.sleep(0.5)
