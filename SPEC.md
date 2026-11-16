@@ -1,10 +1,10 @@
 # PROVE — Implementation and Validation Spec
 
 **PROVE: Provenance and Restriction Of Virtual Events**
-Kernel System Security term project, Assignment 3 (implementation, validation, evaluation plan).
+Kernel System Security term project.
 Author: Stefano Thomas Lemerle (20266401).
 
-This file is the working contract for the repository. It turns the Assignment 2 design document into concrete components, interfaces, milestones and tests. Where this spec and the design document disagree, the design document wins unless the difference is recorded in `docs/DEVIATIONS.md`.
+This file is the working contract for the repository. It defines the components, interfaces, milestones and tests, and is kept in line with the code: when the implementation changes, this file changes with it.
 
 Two markers are used:
 
@@ -46,17 +46,17 @@ Non-goals: defending against root, `CAP_SYS_ADMIN`, `CAP_BPF`, hardware HID emul
 
 - Trusted: kernel, boot chain, root, `provd`, `prove-consent`, allow-listed executables.
 - Attacker: an agent or cheat tool running as the desktop user. No root, no `CAP_SYS_ADMIN`/`CAP_BPF`, not in group `input`. It can open `/dev/uinput` but not `/dev/input/event*`.
-- Known residual risk, measured and reported rather than fixed: a same-uid process hijacking an allow-listed tool or requester (ptrace, `LD_PRELOAD`, IPC), confused deputies.
+- Known residual risk, measured rather than fixed: a same-uid process hijacking an allow-listed tool or requester (ptrace, `LD_PRELOAD`, IPC), confused deputies.
 
-Note: on stock Debian `/dev/uinput` is not user-accessible **[verify]**. The test VM grants the desktop user access (udev rule with `TAG+="uaccess"`), which is what Steam and remapper packages do on real desktops. This is the realistic precondition for the attack, and it is stated in the report.
+Note: on stock Debian `/dev/uinput` is not user-accessible **[verify]**. The test VM grants the desktop user access (udev rule with `TAG+="uaccess"`), which is what Steam and remapper packages do on real desktops. This is the realistic precondition for the attack.
 
 ## 4. Environment
 
 | Item | Value |
 |---|---|
-| Guest OS | Debian 13 (trixie), amd64 |
+| Guest OS | Debian 13 (trixie), arm64 |
 | Kernel | Debian 6.12 series; exact `uname -r` and package version recorded in `docs/ENVIRONMENT.md` |
-| Hypervisor | QEMU/KVM, 4 vCPU, 4 GB RAM, 20 GB disk (ext4 root) |
+| Hypervisor | QEMU (`virt` machine, HVF/KVM), 4 vCPU, 4 GB RAM, 20 GB disk (ext4 root) |
 | Desktop | GNOME on Wayland (default), plus an Xorg session for the XTest cases |
 | Language | Rust end to end, eBPF via Aya; C/libbpf is the fallback (section 12) |
 | Toolchain | stable Rust for userspace, nightly + `bpf-linker` for the eBPF crate, `bpftool`, pinned in `rust-toolchain.toml` and `Cargo.lock` |
@@ -67,7 +67,7 @@ Kernel requirements, checked by `scripts/check-env.sh`:
 - `CONFIG_DEBUG_INFO_BTF=y` (`/sys/kernel/btf/vmlinux` exists).
 - `CONFIG_FUNCTION_TRACER` / fentry support, `CONFIG_INPUT_UINPUT`, `CONFIG_UHID`.
 
-`vm/` contains the scripts that build and boot the VM reproducibly (cloud image or preseed, QEMU command line with a QMP socket, package list). The QEMU machine exposes four "physical" input devices: i8042 PS/2 keyboard, `usb-kbd`, `usb-tablet`, `virtio-keyboard-pci`.
+`vm/` contains the scripts that build and boot the VM reproducibly (cloud image or preseed, QEMU command line with a QMP socket, package list). The QEMU machine exposes four "physical" input devices: `usb-kbd`, `usb-tablet`, `virtio-keyboard-pci`, and a second `usb-kbd` on its own xHCI controller (the arm64 `virt` machine has no i8042 PS/2 controller).
 
 ## 5. Architecture
 
@@ -76,8 +76,8 @@ Kernel requirements, checked by `scripts/check-env.sh`:
  ┌──────────────────────────────┐        ┌──────────────────────────────────┐
  │ fexit  input_register_device │──┐     │ provd (root, early boot)         │
  │ fentry input_unregister_dev. │  │     │  - loads + pins programs/maps    │
- │ fexit  hid_allocate_device   │  ├────▶│  - loads + verifies allow-lists  │
- │ fentry hid_destroy_device    │  │ring │  - audit events -> journald      │
+ │ kretprobe hid_allocate_device│  ├────▶│  - loads + verifies allow-lists  │
+ │ kprobe hid_destroy_device    │  │ring │  - audit events -> journald      │
  │ fexit  input_grab_device     │  │buf  │  - consent socket                │
  │ fentry input_release_device  │  │     │  - spawns prove-consent          │
  │ lsm    file_ioctl(_compat)   │  │     ├──────────────────────────────────┤
@@ -112,7 +112,7 @@ tests/classify/            device classification test
 tests/bench/               overhead and latency benchmarks
 tests/run.sh               runs everything, writes results/
 agent-demo/                LLM agent harness demonstration
-docs/                      ENVIRONMENT.md, VERIFY.md, DEVIATIONS.md, RESULTS.md
+docs/                      ENVIRONMENT.md, VERIFY.md, RESULTS.md
 ```
 
 ## 7. Kernel side (`prove-ebpf`)
@@ -154,8 +154,8 @@ The device key is the input number parsed from the device name (`inputN`). The n
 |---|---|---|
 | `dev_register` | fexit `input_register_device` | If return value is 0: classify, resolve creator (rule below), insert into `DEVICES`, emit `DeviceRegistered`. |
 | `dev_unregister` | fentry `input_unregister_device` | Remove from `DEVICES` and `GRABS`, emit `DeviceUnregistered`. |
-| `hid_alloc` | fexit `hid_allocate_device` | If the returned pointer is valid: store current task as `Creator` in `HID_CREATORS`, keyed by the pointer. |
-| `hid_destroy` | fentry `hid_destroy_device` | Remove from `HID_CREATORS`. |
+| `hid_alloc` | kretprobe `hid_allocate_device` | If the returned pointer is valid: store current task as `Creator` in `HID_CREATORS`, keyed by the pointer. |
+| `hid_destroy` | kprobe `hid_destroy_device` | Remove from `HID_CREATORS`. |
 | `grab` | fexit `input_grab_device` | If return value is 0: record current task as holder in `GRABS`. |
 | `release` | fentry `input_release_device` | Remove from `GRABS` unconditionally. All evdev clients of a device share one handle, and evdev only calls this function for the client that holds the grab, including on close and `EVIOCREVOKE` **[source]**. |
 | `ioctl_guard` | lsm `file_ioctl` and `file_ioctl_compat` | If file is uinput (char 10:223) and `cmd == UI_DEV_CREATE` (0x5501): look up current exe in `ALLOW_INJECT`; on miss emit `Denied` and return `-EPERM` in enforce mode, 0 in audit mode. |
@@ -168,7 +168,7 @@ Classification rule, from device topology only (names, bus type and vendor/produ
 - an ancestor is the uhid misc device (devt 10:239) → `Uhid`. The input device's parent is the HID device, whose parent is `uhid_misc.this_device` **[source]**;
 - otherwise → `Hardware`.
 
-Creator rule. The two paths differ, which corrects the design document (section 15, finding F1):
+Creator rule. The two paths differ (section 15, finding F1):
 
 - `Uinput`: the creator is the current task. `UI_DEV_CREATE` calls `input_register_device()` synchronously inside the ioctl **[source]**.
 - `Uhid`: the current task at registration is a kernel worker, because uhid defers `hid_add_device()` to a workqueue **[source]**. The creator is taken instead from `HID_CREATORS`, looked up by the input device's parent HID device. That entry was written when the `UHID_CREATE`/`UHID_CREATE2` write called `hid_allocate_device()` in the writer's own context **[source]**. If the lookup misses, the creator is recorded as unknown and the device is untrusted.
@@ -262,7 +262,7 @@ A small GTK or terminal program that sends a request, shows action + name + chal
 
 An LLM computer-use harness runs as the desktop user with an input tool backed by uinput (`ydotool` or python-evdev `UInput`) and by XTest (`xdotool`). Its permission layer is `prove-requester-demo`, running outside the agent's tool sandbox. Scenario: a document containing a prompt injection instructs the agent to perform a gated action and press the approval key itself. Record (screen capture + journald) the run in audit mode (approval forged) and enforce mode (device creation denied, prompt times out).
 
-If a real harness proves infeasible in the VM, downgrade to a scripted agent that replays the same tool calls, and record that in `docs/DEVIATIONS.md`.
+If a real harness proves infeasible in the VM, downgrade to a scripted agent that replays the same tool calls.
 
 ## 10. Milestones
 
@@ -273,7 +273,7 @@ If a real harness proves infeasible in the VM, downgrade to a scripted agent tha
 | M2 | uinput enforcement + allow-list + pinning | Non-allow-listed creation and writes get `EPERM` in enforce mode and are only logged in audit mode; enforcement holds after `kill -9 provd` |
 | M3 | Consent contract + assistive mode | Physical key approves; uinput/XTest/Wayland keys never approve; remapper approves in assistive mode only |
 | M4 | Attack suite, classification test, benchmarks | `tests/run.sh` produces `results/` and `docs/RESULTS.md` tables |
-| M5 | Agent demo + Assignment 3 report | Recorded demo, report sections drafted from `docs/` |
+| M5 | Agent demo | Recorded demo (screen capture + journald) in audit and enforce mode |
 | S1–S4 | Stretch items, in that order | Only after M5 is complete |
 
 M0 verification checklist (each line gets result, evidence and fallback in `docs/VERIFY.md`):
@@ -281,7 +281,7 @@ M0 verification checklist (each line gets result, evidence and fallback in `docs
 | # | Item | Status before M0 |
 |---|---|---|
 | 1 | BPF LSM is active, or can be activated with the `lsm=` parameter | open **[verify]** |
-| 2 | fentry/fexit attach to `input_register_device`, `input_unregister_device`, `input_grab_device`, `input_release_device`, `input_inject_event`, `hid_allocate_device`, `hid_destroy_device` | all are non-static functions in 6.12 **[source]**; attachability on the Debian build is open **[verify]** |
+| 2 | fentry/fexit attach to `input_register_device`, `input_unregister_device`, `input_grab_device`, `input_release_device`, `input_inject_event`; kprobes on `hid_allocate_device`, `hid_destroy_device` (in `hid.ko`, a module, where Aya cannot attach fentry/fexit) | all are non-static functions in 6.12 **[source]**; attachability on the Debian build is open **[verify]** |
 | 3 | Creator context: uinput registers in the caller's task; uhid registers from a worker and needs `HID_CREATORS` | settled **[source]** (F1); confirm with a trace on the VM |
 | 4 | Parent rule: uinput has no parent; uhid descends from the uhid misc device | settled **[source]** (F2). Still open: is any non-uinput device on the VM parentless **[verify]** |
 | 5 | The device name `inputN` is readable at fexit | settled **[source]** (F3) |
@@ -329,7 +329,7 @@ In audit mode, A1, A2 and A5 are expected to succeed at injecting (this is the b
 
 ### 11.2 Classification test (`tests/classify/`)
 
-- Hardware set: PS/2 keyboard, USB keyboard, USB tablet, virtio keyboard, hot-plugged and unplugged repeatedly through QMP.
+- Hardware set: two USB keyboards, USB tablet, virtio keyboard, hot-plugged and unplugged repeatedly through QMP.
 - Synthetic set: at least 500 uinput devices (and uhid devices for S1) with randomised names, bus types, vendor/product IDs and capability sets, half of them copying the identity of a real device.
 - Metric: confusion matrix over classes. Target: zero injected devices classed `Hardware`, zero real devices classed injected. Creator attribution is checked against the pid and executable the test itself used.
 
@@ -349,15 +349,6 @@ Targets are set relative to the measured baseline once it exists, and written to
 
 There is no external dataset. All test data is generated: synthetic device descriptors (seeded RNG, seed stored with the results), scripted attack traces, QMP key sequences, and standard benchmark workloads. Every run stores the kernel version, PROVE commit, mode and seed.
 
-### 11.5 Mapping to Assignment 3
-
-| Assignment 3 asks for | Source |
-|---|---|
-| Implementation and validation of the design | sections 7–9, `docs/RESULTS.md` |
-| Description of the implementation environment | `docs/ENVIRONMENT.md` (section 4) |
-| List of evaluation methods | sections 11.1–11.3 |
-| Characteristics of test data or benchmarks | section 11.4 |
-
 ## 12. Risks and fallbacks
 
 | Risk | Fallback |
@@ -365,7 +356,7 @@ There is no external dataset. All test data is generated: synthetic device descr
 | Aya has limited CO-RE support for reading kernel struct fields from Rust; bindings are generated from the VM's BTF and tied to that kernel build | Pin the kernel package in the VM. If field access becomes unworkable, write the eBPF side in C with libbpf and keep userspace in Rust (libbpf-rs) |
 | BPF LSM cannot be enabled on the Debian kernel | Rebuild the Debian kernel with `bpf` in `CONFIG_LSM`; record as an environment change |
 | An input-core function is inlined or not attachable | Use the nearest attachable caller/callee, or a kprobe; record the substitution |
-| Parentless non-uinput devices exist | The `UnknownVirtual` class and ioctl marker (section 7.2) already cover this; list such devices in the report |
+| Parentless non-uinput devices exist | The `UnknownVirtual` class and ioctl marker (section 7.2) already cover this; list such devices in `docs/RESULTS.md` |
 | `file_permission` overhead is significant | Narrow the fast path further; as a last resort attach enforcement to uinput-specific functions with `fmod_ret` where the kernel allows it |
 | Real agent harness does not run in the VM | Scripted agent replaying the same tool calls (section 9) |
 | `EVIOCGRAB` conflicts with the compositor in unexpected ways | Document behaviour per compositor; run the consent tests on the Xorg session as a second data point |
@@ -377,8 +368,6 @@ There is no external dataset. All test data is generated: synthetic device descr
 - Every deny path emits an audit event before returning.
 - Default mode after install is `audit`. Switching to `enforce` is an explicit `provectl` action or config change.
 - Each milestone ends with: tests passing on a fresh VM snapshot, `docs/` updated, a git tag (`m0`…`m5`).
-- Any departure from the design document goes into `docs/DEVIATIONS.md` with the reason, since the Assignment 3 report must explain it.
-- The first entry of `docs/DEVIATIONS.md` is finding F1 (section 15).
 
 Version control, for any coding agent working in this repository:
 
@@ -397,7 +386,7 @@ Version control, for any coding agent working in this repository:
 
 Done by reading the upstream v6.12 tree before any code was written. Nothing here was run. Files read: `drivers/input/input.c`, `drivers/input/evdev.c`, `drivers/input/misc/uinput.c`, `drivers/hid/uhid.c`, `drivers/hid/hid-input.c`, `fs/read_write.c`, `fs/splice.c`, `fs/ioctl.c`, `io_uring/rw.c`, `include/linux/miscdevice.h`.
 
-**F1. uhid devices are not registered in the creator's context (deviation from the design document).** The design document says the creator is the current task for both `UI_DEV_CREATE` and `UHID_CREATE`. This holds for uinput: `uinput_create_device()` calls `input_register_device()` directly from the ioctl handler. It does not hold for uhid: `uhid_dev_create2()` runs in the writer's context but only allocates the HID device and schedules a work item; `uhid_device_add_worker()` later calls `hid_add_device()`, so the input device is registered by a kernel worker. Fix adopted in section 7.2: capture the creator at `hid_allocate_device()`, which `uhid_dev_create2()` calls synchronously, and join on the HID device pointer at registration. The legacy `UHID_CREATE` path ends in `uhid_dev_create2()` and is covered too.
+**F1. uhid devices are not registered in the creator's context.** For uinput the creator is the current task: `uinput_create_device()` calls `input_register_device()` directly from the ioctl handler. It does not hold for uhid: `uhid_dev_create2()` runs in the writer's context but only allocates the HID device and schedules a work item; `uhid_device_add_worker()` later calls `hid_add_device()`, so the input device is registered by a kernel worker. Fix adopted in section 7.2: capture the creator at `hid_allocate_device()`, which `uhid_dev_create2()` calls synchronously, and join on the HID device pointer at registration. The legacy `UHID_CREATE` path ends in `uhid_dev_create2()` and is covered too.
 
 **F2. Parent rule.** `uinput_create_device()` never assigns `dev->dev.parent`, and `input_allocate_device()` leaves it unset. For HID, `hidinput_allocate()` sets the input device's parent to the HID device, and uhid sets the HID device's parent to `uhid_misc.this_device`. The uhid misc device uses the fixed minor 239 and uinput uses 223, so the checks on 10:239 and 10:223 are stable.
 

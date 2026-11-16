@@ -2,8 +2,8 @@
 # Boot the PROVE VM in the background.
 # Usage: vm/run.sh [--gui]     (--gui adds a virtio-gpu and a VNC display on :5 for the desktop milestones)
 #
-# Input devices exposed as "physical" hardware (SPEC section 4, see docs/DEVIATIONS.md for the
-# PS/2 substitution on arm64): usb-kbd, usb-tablet, virtio-keyboard-pci, and a second usb-kbd on
+# Input devices exposed as "physical" hardware (SPEC section 4; arm64 virt has no PS/2, hence the
+# second keyboard): usb-kbd, usb-tablet, virtio-keyboard-pci, and a second usb-kbd on
 # its own xHCI controller. The virtio keyboard sits on PCIe port hp0 so it can be unplugged;
 # hp1 is an empty port for hot-plug tests
 # (e.g. vm/qmp.py plug virtio-keyboard-pci k1 bus=hp1).

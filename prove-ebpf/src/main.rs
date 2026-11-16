@@ -99,7 +99,7 @@ pub fn dev_unregister(ctx: FEntryContext) -> i32 {
 }
 
 // hid.ko is a module; Aya cannot attach fentry/fexit to module functions, so these two are
-// kprobes (docs/DEVIATIONS.md).
+// kprobes.
 
 #[kretprobe]
 pub fn hid_alloc(ctx: RetProbeContext) -> u32 {
