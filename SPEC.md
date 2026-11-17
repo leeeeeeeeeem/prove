@@ -337,8 +337,8 @@ In audit mode, A1, A2 and A5 are expected to succeed at injecting (this is the b
 
 Three configurations: PROVE not loaded, audit, enforce. At least 10 runs each, report median and spread.
 
-- `fio` (sequential and random read/write, small block sizes) and `lmbench` (`lat_syscall` read/write, `lat_ctx`) for the `file_permission` cost.
-- Micro-benchmark: 10⁶ `write()` calls to `/dev/null` and to a uinput fd from an allow-listed process.
+- `fio` (sequential and random read/write, small block sizes on tmpfs) and the `bench-write` micro-benchmark (`write()` to `/dev/null`, `read()` from `/dev/zero`, pipe round trip) for the `file_permission` cost.
+- Micro-benchmark: 10⁶ `write()` calls to `/dev/null` and to a uinput fd from an allow-listed process (`bench-write`).
 - Input latency: timestamp at uinput write vs. timestamp at evdev read, 10⁴ events.
 - Per-program run time from `bpftool prog show` with `kernel.bpf_stats_enabled=1`.
 - Device registration latency with and without the fexit hook.
