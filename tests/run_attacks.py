@@ -45,6 +45,7 @@ def main():
                 print(detail["traceback"], file=sys.stderr)
             if vm.get_mode() != mode:
                 vm.restart_provd(mode)
+            time.sleep(1)  # let any queued hypervisor input drain before the next case opens a prompt
             failed += not ok
             results.append({"id": case.ID, "title": case.TITLE, "mode": mode, "expected": case.EXPECT[mode],
                             "observed": observed, "pass": ok, "seconds": round(time.time() - t0, 1), "detail": detail})
