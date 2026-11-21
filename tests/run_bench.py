@@ -40,17 +40,22 @@ def configure(vm, cfg):
         vm.restart_provd(cfg)
 
 def prog_stats(vm, n=1_000_000):
-    """Average run time of each PROVE program under a write()-heavy workload."""
-    _, out = vm.sh(f"sysctl -qw kernel.bpf_stats_enabled=1; {B}/bench-write null {n} >/dev/null; "
-                   f"{B}/bench-write uinput {n // 10} >/dev/null; {B}/bench-register 100 >/dev/null; "
-                   "for p in /sys/fs/bpf/prove/prog_*; do bpftool -j prog show pinned $p; echo; done; "
-                   "sysctl -qw kernel.bpf_stats_enabled=0", sudo=True)
+    """Average run time of each PROVE program under a write()-heavy workload. The programs stay
+    pinned across provd restarts, so their counters accumulate: report the difference between
+    a snapshot taken before and one taken after the workload."""
+    dump = "for p in /sys/fs/bpf/prove/prog_*; do bpftool -j prog show pinned $p; echo; done"
+    def parse(out):
+        return {j["name"]: (j.get("run_cnt", 0), j.get("run_time_ns", 0))
+                for j in (json.loads(l) for l in out.splitlines() if l.startswith("{"))}
+    _, out = vm.sh(f"sysctl -qw kernel.bpf_stats_enabled=1; {dump}", sudo=True)
+    before = parse(out)
+    _, out = vm.sh(f"{B}/bench-write null {n} >/dev/null; {B}/bench-write uinput {n // 10} >/dev/null; "
+                   f"{B}/bench-register 100 >/dev/null; {dump}; sysctl -qw kernel.bpf_stats_enabled=0", sudo=True)
     stats = {}
-    for line in out.splitlines():
-        if line.startswith("{"):
-            j = json.loads(line)
-            cnt = j.get("run_cnt", 0)
-            stats[j["name"]] = {"run_cnt": cnt, "avg_ns": round(j.get("run_time_ns", 0) / cnt, 1) if cnt else None}
+    for name, (cnt, ns) in parse(out).items():
+        c0, t0 = before.get(name, (0, 0))
+        cnt, ns = cnt - c0, ns - t0
+        stats[name] = {"run_cnt": cnt, "avg_ns": round(ns / cnt, 1) if cnt else None}
     return stats
 
 def summarise(samples):
