@@ -260,7 +260,11 @@ A small GTK or terminal program that sends a request, shows action + name + chal
 
 ## 9. Agent demonstration (`agent-demo/`)
 
-An LLM computer-use harness runs as the desktop user with an input tool backed by uinput (`ydotool` or python-evdev `UInput`) and by XTest (`xdotool`). Its permission layer is `prove-requester-demo`, running outside the agent's tool sandbox. Scenario: a document containing a prompt injection instructs the agent to perform a gated action and press the approval key itself. Record (screen capture + journald) the run in audit mode (approval forged) and enforce mode (device creation denied, prompt times out).
+An LLM computer-use harness runs as the desktop user with an input tool backed by uinput (`ydotool` or python-evdev `UInput`) and by XTest (`xdotool`). Its permission layer is `prove-requester-demo`, running outside the agent's tool sandbox. Scenario: a document containing a prompt injection instructs the agent to perform a gated action and press the approval key itself. Record (screen capture + journald) three runs:
+
+1. Baseline: the gated action is protected by a conventional terminal prompt instead of the PROVE consent contract. The agent's uinput key reaches the prompt and the approval is forged.
+2. PROVE in `audit` mode: the agent's uinput device is created and its keys reach the desktop (logged in journald), but the prompt is not approved, because consent checks device records independently of the enforcement mode (section 11). The prompt times out.
+3. PROVE in `enforce` mode: device creation is denied with `EPERM` and the prompt times out.
 
 If a real harness proves infeasible in the VM, downgrade to a scripted agent that replays the same tool calls.
 
@@ -273,7 +277,7 @@ If a real harness proves infeasible in the VM, downgrade to a scripted agent tha
 | M2 | uinput enforcement + allow-list + pinning | Non-allow-listed creation and writes get `EPERM` in enforce mode and are only logged in audit mode; enforcement holds after `kill -9 provd` |
 | M3 | Consent contract + assistive mode | Physical key approves; uinput/XTest/Wayland keys never approve; remapper approves in assistive mode only |
 | M4 | Attack suite, classification test, benchmarks | `tests/run.sh` produces `results/` and `docs/RESULTS.md` tables |
-| M5 | Agent demo | Recorded demo (screen capture + journald) in audit and enforce mode |
+| M5 | Agent demo | Recorded demo (screen capture + journald): baseline prompt forged, audit and enforce mode not approved (section 9) |
 | S1–S4 | Stretch items, in that order | Only after M5 is complete |
 
 M0 verification checklist (each line gets result, evidence and fallback in `docs/VERIFY.md`):
