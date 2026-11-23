@@ -1,0 +1,65 @@
+# Implementation environment
+
+The environment PROVE was built and validated on (SPEC section 4). Captured from the running VM
+on 2026-11-23.
+
+## Guest (the system under test)
+
+| Item | Value |
+|---|---|
+| OS | Debian GNU/Linux 13 (trixie), arm64 |
+| Kernel | `6.12.116+deb13-arm64`, `#1 SMP Debian 6.12.116-1 (2026-11-07)` |
+| Architecture | aarch64 |
+| vCPU / RAM | 4 / 4 GB (3.8 GiB usable) |
+| Root filesystem | ext4 on `/dev/vda1` (virtio-blk) |
+| Disk | 20 GB qcow2 |
+
+Relevant kernel configuration (`/boot/config-$(uname -r)`):
+
+| Option | Value | Meaning |
+|---|---|---|
+| `CONFIG_BPF_LSM` | `y` | BPF LSM compiled in |
+| `CONFIG_DEBUG_INFO_BTF` | `y` | `/sys/kernel/btf/vmlinux` present (≈5.4 MB) |
+| `CONFIG_FUNCTION_TRACER` | `y` | fentry/fexit attach support |
+| `CONFIG_INPUT_UINPUT` | `m` | uinput is a module |
+| `CONFIG_UHID` | `m` | uhid is a module |
+| `CONFIG_HID` | `m` | HID core is a module → `hid_allocate_device`/`hid_destroy_device` need kprobes, not fentry/fexit |
+
+Active LSMs (`/sys/kernel/security/lsm`):
+`lockdown,capability,landlock,yama,apparmor,tomoyo,bpf,ipe,ima,evm`.
+`bpf` is present without any `lsm=` kernel argument — the stock Debian kernel enables it by default
+(kernel cmdline is just `BOOT_IMAGE=… root=… ro`).
+
+## Host / hypervisor
+
+| Item | Value |
+|---|---|
+| Host | Apple `Mac16,1`, macOS 26.0 |
+| Hypervisor | QEMU `virt` machine, HVF acceleration, `-cpu host` |
+| Emulated input | `usb-kbd` ×2 (separate xHCI controllers), `usb-tablet`, `virtio-keyboard-pci` |
+
+The arm64 `virt` machine has no i8042 PS/2 controller, so the fourth "physical" keyboard is a
+second `usb-kbd` on its own controller rather than a PS/2 device. The virtio keyboard sits on a
+hot-pluggable PCIe root port for the hot-plug classification rounds.
+
+## Toolchain
+
+| Item | Value |
+|---|---|
+| Userspace | Rust (stable), one workspace, built with `cargo build` |
+| eBPF | Aya, built by the `provd` build script; `prove-ebpf` is `no_std` |
+| Pinned versions | `rust-toolchain.toml`, `Cargo.lock` |
+
+## Reproducing
+
+```
+vm/build.sh            # fetch the Debian cloud image, create disk + cloud-init seed
+vm/run.sh              # boot (add --gui for a desktop display)
+vm/wait.sh             # block until SSH + cloud-init are ready
+vm/sync.sh             # copy the working tree to ~/prove in the guest
+vm/ssh.sh 'cd ~/prove && cargo build && sudo scripts/install.sh --test-vm'
+vm/ssh.sh 'cd ~/prove && sudo tests/fixtures/setup.sh'   # build C fixtures, write the test allow-list
+```
+
+Test entry points run from the host: `tests/run_attacks.py`, `tests/run_classify.py`,
+`tests/run_bench.py` (each takes `--out results/<date>`). See `docs/RESULTS.md` for the recorded run.
