@@ -1,4 +1,4 @@
-# PROVE — Implementation and Validation Spec
+# PROVE: Implementation and Validation Spec
 
 **PROVE: Provenance and Restriction Of Virtual Events**
 Kernel System Security term project.
@@ -34,11 +34,11 @@ PROVE is not an anticheat. Cheat tools appear only as extra test adversaries.
 | Consent contract: `provd` + `prove-consent` + one demo requester | core | M3 |
 | Assistive mode: one allow-listed remapper accepted by the prompt | core | M3 |
 | Scripted attack suite, classification test, overhead measurements | core | M4 |
-| LLM computer-use agent harness demonstration | core (demo) | M5 |
 | uhid enforcement and Bluetooth (`bluetoothd` allow-listed) | stretch | S1 |
 | evdev-write injection counter | stretch | S2 |
 | Protected session (cgroup launcher, game case study) | stretch | S3 |
 | Bare-metal run | stretch | S4 |
+| LLM computer-use agent demonstration, recorded for the presentation | stretch | S5 |
 
 Non-goals: defending against root, `CAP_SYS_ADMIN`, `CAP_BPF`, hardware HID emulators, fake or overlaid prompts, XTest/Wayland/libei injection outside the prompt, behavioural (ML) classification.
 
@@ -57,11 +57,11 @@ Note: on stock Debian `/dev/uinput` is not user-accessible **[verify]**. The tes
 | Guest OS | Debian 13 (trixie), arm64 |
 | Kernel | Debian 6.12 series; exact `uname -r` and package version recorded in `docs/ENVIRONMENT.md` |
 | Hypervisor | QEMU (`virt` machine, HVF/KVM), 4 vCPU, 4 GB RAM, 20 GB disk (ext4 root) |
-| Desktop | GNOME on Wayland (default), plus an Xorg session for the XTest cases |
+| Desktop | GNOME on Wayland (default), plus an Xorg session for the XTest cases; installed by `vm/desktop.sh` on top of the headless image |
 | Language | Rust end to end, eBPF via Aya; C/libbpf is the fallback (section 12) |
 | Toolchain | stable Rust for userspace, nightly + `bpf-linker` for the eBPF crate, `bpftool`, pinned in `rust-toolchain.toml` and `Cargo.lock` |
 
-Kernel requirements, checked by `scripts/check-env.sh`:
+Kernel requirements, checked in M0 and recorded in `docs/VERIFY.md`:
 
 - `CONFIG_BPF_LSM=y` and `bpf` present in `/sys/kernel/security/lsm`. Debian compiles BPF LSM in but probably does not list it in the default `lsm=` set **[verify]**; if absent, add `lsm=<current list>,bpf` to `GRUB_CMDLINE_LINUX` and reboot.
 - `CONFIG_DEBUG_INFO_BTF=y` (`/sys/kernel/btf/vmlinux` exists).
@@ -110,8 +110,11 @@ vm/                        VM build and run scripts
 tests/attacks/             one script per attack case
 tests/classify/            device classification test
 tests/bench/               overhead and latency benchmarks
-tests/run.sh               runs everything, writes results/
-agent-demo/                LLM agent harness demonstration
+tests/run_attacks.py       attack suite, both modes, writes results/
+tests/run_classify.py      classification test, writes results/
+tests/run_bench.py         overhead measurements, writes results/
+scripts/                   install and in-VM build scripts
+agent-demo/                LLM agent demonstration (S5, not yet written)
 docs/                      ENVIRONMENT.md, VERIFY.md, RESULTS.md
 ```
 
@@ -258,7 +261,7 @@ Devices hot-plugged during a prompt are ignored.
 
 A small GTK or terminal program that sends a request, shows action + name + challenge key, and prints the verdict. It stands in for a polkit agent or an agent harness's permission layer, and is what the attack suite and the agent demo approve against.
 
-## 9. Agent demonstration (`agent-demo/`)
+## 9. Agent demonstration (`agent-demo/`, stretch S5)
 
 An LLM computer-use harness runs as the desktop user with an input tool backed by uinput (`ydotool` or python-evdev `UInput`) and by XTest (`xdotool`). Its permission layer is `prove-requester-demo`, running outside the agent's tool sandbox. Scenario: a document containing a prompt injection instructs the agent to perform a gated action and press the approval key itself. Record (screen capture + journald) three runs:
 
@@ -272,13 +275,13 @@ If a real harness proves infeasible in the VM, downgrade to a scripted agent tha
 
 | ID | Deliverable | Acceptance |
 |---|---|---|
-| M0 | VM, toolchain, Aya skeleton, `scripts/check-env.sh`, verification checklist | A trivial fentry and a trivial LSM program load and fire on the VM; `docs/VERIFY.md` filled in |
+| M0 | VM, toolchain, Aya skeleton, verification checklist | A trivial fentry and a trivial LSM program load and fire on the VM; `docs/VERIFY.md` filled in |
 | M1 | Provenance records + audit | `provectl devices` shows correct class and creator for the 4 QEMU devices and a test uinput device; events appear in journald |
 | M2 | uinput enforcement + allow-list + pinning | Non-allow-listed creation and writes get `EPERM` in enforce mode and are only logged in audit mode; enforcement holds after `kill -9 provd` |
 | M3 | Consent contract + assistive mode | Physical key approves; uinput/XTest/Wayland keys never approve; remapper approves in assistive mode only |
-| M4 | Attack suite, classification test, benchmarks | `tests/run.sh` produces `results/` and `docs/RESULTS.md` tables |
-| M5 | Agent demo | Recorded demo (screen capture + journald): baseline prompt forged, audit and enforce mode not approved (section 9) |
-| S1–S4 | Stretch items, in that order | Only after M5 is complete |
+| M4 | Attack suite, classification test, benchmarks | `tests/run_attacks.py`, `tests/run_classify.py` and `tests/run_bench.py` write `results/`; tables in `docs/RESULTS.md` |
+| S1–S4 | Stretch items | Only after M4 is complete |
+| S5 | Agent demo | Recorded demo (screen capture + journald): baseline prompt forged, audit and enforce mode not approved (section 9). Done before the presentation |
 
 M0 verification checklist (each line gets result, evidence and fallback in `docs/VERIFY.md`):
 
@@ -371,20 +374,20 @@ There is no external dataset. All test data is generated: synthetic device descr
 - All decisions in eBPF are made on `ExeId`, never on `comm` or paths.
 - Every deny path emits an audit event before returning.
 - Default mode after install is `audit`. Switching to `enforce` is an explicit `provectl` action or config change.
-- Each milestone ends with: tests passing on a fresh VM snapshot, `docs/` updated, a git tag (`m0`…`m5`).
+- Each milestone ends with tests passing on the VM and `docs/` updated.
 
 Version control, for any coding agent working in this repository:
 
 - Commit at regular intervals: after each coherent unit of work (a program that loads, a passing test, a filled-in checklist item, a doc update), and at least once per working session. Do not let large uncommitted changes accumulate.
-- Each commit builds, has a short imperative subject line and names the milestone it belongs to (for example `M1: record creator for uinput devices`).
-- Never push. No `git push`, no pushing tags, no creating or updating remote branches or pull requests. All commits and milestone tags stay local; the author reviews and pushes them himself.
+- Each commit builds and has a short imperative subject line, for example `Record creator for uinput devices`. No milestone prefix.
+- Never push. No `git push`, no pushing tags, no creating or updating remote branches or pull requests. All commits stay local; the author reviews and pushes them himself.
 
 ## 14. Open decisions (defaults apply unless changed)
 
 1. Remapper used for assistive mode: **keyd**.
 2. Requester UI: **terminal program** first, GTK window if time allows.
-3. Agent harness: **an open computer-use harness driving the VM desktop**, model and harness chosen at M5.
-4. Systemd-unit-based identification: **not implemented** unless M5 finishes early.
+3. Agent harness: **an open computer-use harness driving the VM desktop**, model and harness chosen at S5.
+4. Systemd-unit-based identification: **not implemented**.
 
 ## 15. Source review (Linux v6.12, upstream)
 

@@ -27,7 +27,7 @@ Relevant kernel configuration (`/boot/config-$(uname -r)`):
 
 Active LSMs (`/sys/kernel/security/lsm`):
 `lockdown,capability,landlock,yama,apparmor,tomoyo,bpf,ipe,ima,evm`.
-`bpf` is present without any `lsm=` kernel argument — the stock Debian kernel enables it by default
+`bpf` is present without any `lsm=` kernel argument: the stock Debian kernel enables it by default
 (kernel cmdline is just `BOOT_IMAGE=… root=… ro`).
 
 ## Host / hypervisor
