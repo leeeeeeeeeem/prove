@@ -17,17 +17,16 @@ and the fallback that was prepared in case it failed.
 | 9 | `bpf_d_path` not needed; executable identity is dev/inode only | **Confirmed by design** | `prove-ebpf` contains no `d_path` use; identity is `ExeId { dev, ino }` (`prove-common`) | — |
 | 10 | Default permissions of `/dev/uinput`, `/dev/uhid`, `/dev/input/event*` | **Confirmed** | Stock Debian ships uinput/uhid without a `uaccess` tag, so a non-root user not in `input` cannot open them — this is the attack precondition. The test VM's udev rule (`70-prove-test-uinput.rules`) grants the desktop user access via group `prove-attacker` (`crw-rw---- root prove-attacker`), as Steam/remapper packages do. evdev nodes are `root:input 0660` | — |
 | 11 | Aya pins LSM + fentry links and re-attaches after a daemon restart | **Yes** | After `systemctl restart provd` (pid changed), the same 10 programs stay attached to the same pins; `provd` re-attaches rather than reloading. Attack A10: injection stays denied while `provd` is dead, because the pinned maps/programs survive its absence | — |
-| 12 | `EVIOCGRAB` from `prove-consent` hides the key from the compositor | **Partial — headless** | The grab mechanism works: `prove-consent` grabs every keyboard during a prompt, and the consent positive/negative cases (P1–P4, A8) pass. Whether the grab hides the key from GNOME/Wayland specifically was not confirmed, as the validation runs headless | Run the consent tests on an Xorg session as a second data point (SPEC risk table); open for the M5 desktop demo |
+| 12 | `EVIOCGRAB` from `prove-consent` hides the key from the compositor | **Yes, on GNOME Wayland and GNOME Xorg** | Checked 2026-11-24 with `vm/desktop.sh` + `vm/run.sh --gui`: with a GNOME text field focused, two control `a` presses through QMP reach the field; the challenge key pressed during the prompt approves it (`KEY_7`, `KEY_6` on input1) but never appears in the field. Screenshots `results/2026-11-24/item12-{wayland,xorg}.png` | Run the consent tests on an Xorg session as a second data point (done) |
 | 13 | evdev minor numbers beyond the legacy 64–95 range | **None present** | All current evdev nodes are minors 64–68 (`/dev/input/event0‑4`), inside the legacy range. No device exceeds 95 on this VM | Only relevant to the S2 fast path; handled there if a higher minor appears |
 
 ## Notes
 
 - Items 1, 4, 8, 10, 11 were the open `[verify]` questions; all resolve favourably. Item 1 is the
   happiest surprise: no GRUB change was needed, as Debian's kernel enables the BPF LSM by default.
-- Item 7 (compat ioctl) and item 12 (compositor grab) are confirmed only as far as this
-  environment allows — a 32-bit userspace and a real desktop session, respectively, are out of
-  scope for the headless arm64 test rig. Both hooks/mechanisms are in place and attach; only the
-  end-to-end exercise is deferred.
+- Item 7 (compat ioctl) is confirmed only as far as this environment allows: arm64 runs no
+  32-bit userspace. The hook is in place and attached. Item 12 was confirmed on a GNOME desktop
+  installed for the purpose (Wayland and Xorg sessions).
 - Mode is read from `provd.toml` at start-up (default `audit`) and is settable at runtime with
   `provectl mode`; the runtime value lives in the pinned `CONFIG` map, so enforcement persists
   across a `provd` crash (A10) while a clean restart re-reads the file (SPEC section 13).
