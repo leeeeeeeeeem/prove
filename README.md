@@ -5,8 +5,12 @@
 Linux does not record where an input event comes from. Any process that can open `/dev/uinput`
 can create a virtual keyboard and type into the desktop, including into a permission prompt. A
 prompt-injected AI agent can use this to approve its own actions.
+What PROVE delivers is a consent prompt that applications can send before sensitive operations 
+that need user approval, which asks the user to input a *challenge key* with a 30 second timeout.
+PROVE then guarantees that the key was sent by a hardware keyboard by the user and not injected by
+an attacker.
 
-PROVE fixes this with BPF:
+This is done with BPF:
 
 1. **Provenance.** Every input device gets a kernel record of how it was created (hardware,
    uinput, uhid) and which process created it.
@@ -89,7 +93,3 @@ as hardware, and the hot path costs about 31 ns per write.
 - [docs/ENVIRONMENT.md](docs/ENVIRONMENT.md): exact VM, kernel and toolchain versions
 - [docs/VERIFY.md](docs/VERIFY.md): kernel assumptions checked on the VM
 - [docs/RESULTS.md](docs/RESULTS.md): test and benchmark results
-
-## Author
-
-Stefano Thomas Lemerle (20266401)
