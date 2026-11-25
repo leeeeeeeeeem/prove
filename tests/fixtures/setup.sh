@@ -2,11 +2,10 @@
 # Prepare the VM for the test suite. Run as root in the VM, after scripts/install.sh.
 #   - builds the C fixtures into /usr/libexec/prove-test (root-owned)
 #   - writes the allow-list used by the tests (inject-helper, bench tools, keyd)
-#   - shortens the consent timeout so negative cases finish quickly
-# usage: setup.sh [consent_timeout_ms]
+# The consent timeout is set by tests/run_attacks.py while it runs, not here.
+# usage: setup.sh
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
-timeout_ms="${1:-4000}"
 dst=/usr/libexec/prove-test
 install -d -m 0755 "$dst"
 for src in inject-helper uring-write; do
@@ -33,8 +32,6 @@ entry() { # name path flags
     # Debian installs the keyd binary as keyd.rvaiya.
     entry keyd "$(readlink -f "$(command -v keyd.rvaiya || command -v keyd || echo /nonexistent)")" '["inject", "assistive"]'
 } > /etc/prove/allow-inject.toml
-
-sed -i "s/^consent_timeout_ms = .*/consent_timeout_ms = $timeout_ms/" /etc/prove/provd.toml
 
 # keyd: grab every keyboard and remap one unused key, so that it behaves as a real remapper.
 install -d /etc/keyd

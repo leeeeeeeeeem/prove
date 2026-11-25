@@ -76,6 +76,12 @@ class VM:
                 return line.split()[1]
         return None
 
+    def set_consent_timeout(self, ms):
+        """Write consent_timeout_ms into provd.toml. Takes effect on the next restart_provd."""
+        rc, out = self.sh(f"sed -i 's/^consent_timeout_ms = .*/consent_timeout_ms = {int(ms)}/' /etc/prove/provd.toml",
+                          sudo=True)
+        assert rc == 0, out
+
     def restart_provd(self, mode):
         rc, out = self.sh("systemctl restart provd", sudo=True)
         assert rc == 0, out
