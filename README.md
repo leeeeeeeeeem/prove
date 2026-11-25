@@ -7,7 +7,7 @@ can create a virtual keyboard and type into the desktop, including into a permis
 prompt-injected AI agent can use this to approve its own actions.
 What PROVE delivers is a consent prompt that applications can send before sensitive operations 
 that need user approval, which asks the user to input a *challenge key* with a 30 second timeout.
-PROVE then guarantees that the key was sent by a hardware keyboard by the user and not injected by
+PROVE then guarantees that the key was sent through a hardware keyboard by the user and not injected by
 an attacker.
 
 This is done with BPF:
