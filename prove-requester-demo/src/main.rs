@@ -4,7 +4,17 @@
 //! `provd` for consent to one action, shows the action and the challenge key, and reports
 //! the verdict. Exit status: 0 approved, 2 denied, 3 timeout, 4 error.
 
-use std::{os::unix::net::UnixStream, process::ExitCode};
+use std::{
+    io::{IsTerminal as _, Write as _},
+    os::unix::net::UnixStream,
+    process::ExitCode,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread::JoinHandle,
+    time::{Duration, Instant},
+};
 
 use anyhow::{Context as _, Result, bail};
 use prove_common::user::{
@@ -58,6 +68,76 @@ fn parse_args() -> Result<Args> {
     Ok(a)
 }
 
+fn expiry_line(secs: u64) -> String {
+    format!("Anything else is ignored; the request expires in {secs} s.")
+}
+
+/// The terminal prompt: a box whose width fits the longest line.
+#[derive(Clone, Copy)]
+struct PromptBox {
+    width: usize,
+}
+
+impl PromptBox {
+    const TITLE: &str = "─ PROVE consent request ";
+    const MIN_WIDTH: usize = 62;
+
+    fn new(lines: &[String]) -> Self {
+        let longest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(0);
+        Self { width: Self::MIN_WIDTH.max(longest + 2) }
+    }
+
+    fn row(&self, text: &str) -> String {
+        // Inside the borders: one space, the text, padding, one space.
+        let pad = self.width.saturating_sub(text.chars().count() + 2);
+        format!("│ {text}{} │", " ".repeat(pad))
+    }
+
+    fn print(&self, lines: &[String]) {
+        let fill = self.width - Self::TITLE.chars().count();
+        println!("┌{}{}┐", Self::TITLE, "─".repeat(fill));
+        for l in lines {
+            println!("{}", self.row(l));
+        }
+        println!("└{}┘", "─".repeat(self.width));
+    }
+}
+
+/// Rewrites the expiry line (the last row inside the box) once a second.
+struct Countdown {
+    stop: Arc<AtomicBool>,
+    handle: JoinHandle<()>,
+}
+
+impl Countdown {
+    fn start(prompt: PromptBox, timeout_ms: u64) -> Self {
+        let stop = Arc::new(AtomicBool::new(false));
+        let flag = stop.clone();
+        let deadline = Instant::now() + Duration::from_millis(timeout_ms);
+        let handle = std::thread::spawn(move || {
+            let mut shown = timeout_ms.div_ceil(1000);
+            while !flag.load(Ordering::Relaxed) {
+                let left = deadline.saturating_duration_since(Instant::now()).as_millis() as u64;
+                let secs = left.div_ceil(1000);
+                if secs != shown {
+                    shown = secs;
+                    let mut out = std::io::stdout().lock();
+                    // Up two lines (past the bottom border), rewrite, back down.
+                    let _ = write!(out, "\x1b[2A\r{}\x1b[2B\r", prompt.row(&expiry_line(secs)));
+                    let _ = out.flush();
+                }
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        });
+        Self { stop, handle }
+    }
+
+    fn stop(self) {
+        self.stop.store(true, Ordering::Relaxed);
+        let _ = self.handle.join();
+    }
+}
+
 fn run(args: &Args) -> Result<Verdict> {
     let mut nonce_bytes = [0u8; 16];
     getrandom::fill(&mut nonce_bytes).map_err(|e| anyhow::anyhow!("CSPRNG failure: {e}"))?;
@@ -71,6 +151,7 @@ fn run(args: &Args) -> Result<Verdict> {
         &ClientMsg::Request { nonce: nonce.clone(), action: args.action.clone(), mode: args.mode },
     )?;
 
+    let mut countdown: Option<Countdown> = None;
     loop {
         match read_msg::<_, ServerMsg>(&mut sock).context("reading from provd")? {
             ServerMsg::Challenge { key, timeout_ms } => {
@@ -85,13 +166,18 @@ fn run(args: &Args) -> Result<Verdict> {
                         PromptMode::Physical => "on a physical keyboard",
                         PromptMode::Assistive => "on your keyboard (assistive tools accepted)",
                     };
-                    println!("┌─ PROVE consent request ─────────────────────────────────────");
-                    println!("│ requester : prove-requester-demo (pid {})", std::process::id());
-                    println!("│ action    : {}", args.action);
-                    println!("│");
-                    println!("│ To approve, press  [ {label} ]  {how}.");
-                    println!("│ Anything else is ignored; the request expires in {} s.", timeout_ms / 1000);
-                    println!("└─────────────────────────────────────────────────────────────");
+                    let lines = [
+                        format!("requester : prove-requester-demo (pid {})", std::process::id()),
+                        format!("action    : {}", args.action),
+                        String::new(),
+                        format!("To approve, press  [ {label} ]  {how}."),
+                        expiry_line(timeout_ms.div_ceil(1000)),
+                    ];
+                    let prompt = PromptBox::new(&lines);
+                    prompt.print(&lines);
+                    if std::io::stdout().is_terminal() {
+                        countdown = Some(Countdown::start(prompt, timeout_ms));
+                    }
                 }
             }
             ServerMsg::Result { nonce: got_nonce, action_sha256, verdict, reason } => {
@@ -109,6 +195,9 @@ fn run(args: &Args) -> Result<Verdict> {
                         json!({"event": "result", "verdict": verdict.as_str(), "reason": reason})
                     );
                 } else {
+                    if let Some(c) = countdown.take() {
+                        c.stop();
+                    }
                     println!("verdict: {} ({reason})", verdict.as_str().to_uppercase());
                 }
                 return Ok(verdict);
