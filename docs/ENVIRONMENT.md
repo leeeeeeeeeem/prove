@@ -46,9 +46,11 @@ hot-pluggable PCIe root port for the hot-plug classification rounds.
 
 | Item | Value |
 |---|---|
-| Userspace | Rust (stable), one workspace, built with `cargo build` |
-| eBPF | Aya, built by the `provd` build script; `prove-ebpf` is `no_std` |
-| Pinned versions | `rust-toolchain.toml`, `Cargo.lock` |
+| Userspace | Rust `1.100.0` (stable), one workspace, built with `cargo build` |
+| eBPF | Aya, built by the `provd` build script with `nightly-2026-11-13` (rustc 1.102.0-nightly 8eb778d04) + `rust-src`; `prove-ebpf` is `no_std` |
+| BPF linker | `bpf-linker` 0.13.0 (prebuilt, via `cargo binstall`) |
+| Install | `scripts/setup-vm.sh` installs all of the above |
+| Pinned versions | `rust-toolchain.toml`, `EBPF_TOOLCHAIN` in `provd/build.rs`, `scripts/setup-vm.sh`, `Cargo.lock` |
 
 ## Reproducing
 
@@ -57,9 +59,10 @@ vm/build.sh            # fetch the Debian cloud image, create disk + cloud-init 
 vm/run.sh              # boot (add --gui for a desktop display)
 vm/wait.sh             # block until SSH + cloud-init are ready
 vm/sync.sh             # copy the working tree to ~/prove in the guest
-vm/ssh.sh 'cd ~/prove && cargo build && sudo scripts/install.sh --test-vm'
+vm/ssh.sh 'cd ~/prove && scripts/setup-vm.sh'           # rustup, pinned toolchains, bpf-linker
+vm/ssh.sh '. ~/.cargo/env && cd ~/prove && cargo build && sudo scripts/install.sh --test-vm'
 vm/ssh.sh 'cd ~/prove && sudo tests/fixtures/setup.sh'   # build C fixtures, write the test allow-list
 ```
 
 Test entry points run from the host: `tests/run_attacks.py`, `tests/run_classify.py`,
-`tests/run_bench.py` (each takes `--out results/<date>`). See `docs/RESULTS.md` for the recorded run.
+`tests/run_bench.py` (each takes `--out <dir>` for its local JSON output). The recorded run is in `docs/RESULTS.md`.

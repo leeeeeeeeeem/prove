@@ -46,7 +46,9 @@ SSH key.
 vm/build.sh                 # fetch the cloud image, create the disk and cloud-init seed
 vm/run.sh                   # boot headless (add --gui for a VNC display on 127.0.0.1:5)
 vm/wait.sh                  # wait for SSH and cloud-init
-scripts/vm-build.sh         # copy the tree into the VM and build it there
+vm/sync.sh                  # copy the tree into ~/prove in the VM
+vm/ssh.sh prove/scripts/setup-vm.sh   # once: rustup, pinned stable + nightly, bpf-linker
+scripts/vm-build.sh         # re-sync and build in the VM
 vm/ssh.sh 'cd prove && sudo scripts/install.sh --test-vm'
 vm/ssh.sh sudo provectl status
 ```
@@ -68,8 +70,8 @@ python3 tests/run_classify.py    # device classification
 python3 tests/run_bench.py       # overhead
 ```
 
-Each writes JSON under `results/<date>/`. The latest numbers are summarised in
-[docs/RESULTS.md](docs/RESULTS.md): 38 of 38 attack runs pass, no injected device is ever classed
+Each writes JSON under `results/<date>/`, which is local output and not tracked. The recorded
+results are in [docs/RESULTS.md](docs/RESULTS.md): 38 of 38 attack runs pass, no injected device is ever classed
 as hardware, and the hot path costs about 31 ns per write.
 
 ## Status

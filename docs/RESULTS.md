@@ -1,7 +1,8 @@
 # Results
 
-Validation and evaluation of PROVE (SPEC section 11). Raw machine-readable output is under
-`results/<date>/`; this file summarises the run of 2026-11-23.
+Validation and evaluation of PROVE (SPEC section 11). This file records the run of
+2026-11-23. Rerunning the test scripts writes the same data as JSON to a local, untracked
+`results/<date>/` directory.
 
 ## Environment
 
@@ -12,7 +13,6 @@ Validation and evaluation of PROVE (SPEC section 11). Raw machine-readable outpu
 | Guest resources | 4 vCPU, 4 GB RAM, 20 GB ext4 root |
 | Hypervisor | QEMU `virt` machine with HVF acceleration |
 | Host | Apple `Mac16,1`, macOS 26.0 |
-| PROVE commit | `ac2ab6c` (benchmarks), `daf7f27` (attack suite) |
 
 All tests run from the host over SSH and QMP. "Physical" key presses are injected through QMP
 `input-send-event`, so in the VM they originate from the hypervisor rather than a real device;
@@ -20,8 +20,8 @@ this is the one unavoidable gap between the test rig and a bare-metal desktop.
 
 ## Attack suite (SPEC 11.1)
 
-`tests/run_attacks.py`, both modes. **38/38 runs pass (19 cases × audit and enforce.)** Full
-detail in `results/2026-11-23/attacks.json`; the observed column below is the enforce-mode run.
+`tests/run_attacks.py`, both modes. **38/38 runs pass (19 cases × audit and enforce.)** The
+observed column below is the enforce-mode run.
 
 | # | Case | Enforce-mode outcome |
 |---|---|---|
@@ -54,8 +54,7 @@ has no implemented case.
 
 ## Classification (SPEC 11.2)
 
-`tests/run_classify.py --seed 20266401 --uinput 500 --uhid 100 --hotplug-rounds 10`. Result in
-`results/2026-11-23/classify.json`. **PASS.**
+`tests/run_classify.py --seed 20266401 --uinput 500 --uhid 100 --hotplug-rounds 10`. **PASS.**
 
 Confusion matrix (rows: true class, columns: recorded class):
 
@@ -78,7 +77,7 @@ classification uses device topology only, never attacker-chosen identity fields.
 ## Overhead (SPEC 11.3)
 
 `tests/run_bench.py --runs 10`, three configurations (PROVE unloaded / audit / enforce). Medians
-over 10 runs, with inter-quartile range; full samples in `results/2026-11-23/bench.json`.
+over 10 runs, with inter-quartile range.
 
 | Metric | Unit | Unloaded | Audit | Enforce | Audit Δ | Enforce Δ |
 |---|---|---|---|---|---|---|

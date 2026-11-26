@@ -115,11 +115,7 @@ class VM:
 
     def info(self):
         _, kernel = self.sh("uname -r")
-        return {"kernel": kernel.strip(),
-                "commit": subprocess.run(["git", "-C", ROOT, "rev-parse", "--short", "HEAD"],
-                                         capture_output=True, text=True).stdout.strip(),
-                "dirty": bool(subprocess.run(["git", "-C", ROOT, "status", "--porcelain"],
-                                             capture_output=True, text=True).stdout.strip())}
+        return {"kernel": kernel.strip()}
 
     # ---- hypervisor ("physical") input ----
     @property

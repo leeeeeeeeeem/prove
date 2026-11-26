@@ -1,7 +1,10 @@
 use anyhow::{Context as _, anyhow};
 use aya_build::Toolchain;
 
-/// Builds `prove-ebpf` for the BPF target (nightly + bpf-linker) and places the object in
+/// Nightly used for the BPF target; keep in sync with scripts/setup-vm.sh.
+const EBPF_TOOLCHAIN: &str = "nightly-2026-11-13";
+
+/// Builds `prove-ebpf` for the BPF target (pinned nightly + bpf-linker) and places the object in
 /// `OUT_DIR/prove`, from where `provd` embeds it.
 fn main() -> anyhow::Result<()> {
     let cargo_metadata::Metadata { packages, .. } = cargo_metadata::MetadataCommand::new()
@@ -20,5 +23,5 @@ fn main() -> anyhow::Result<()> {
             .as_str(),
         ..Default::default()
     };
-    aya_build::build_ebpf([package], Toolchain::default())
+    aya_build::build_ebpf([package], Toolchain::Custom(EBPF_TOOLCHAIN))
 }

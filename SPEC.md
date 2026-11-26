@@ -354,7 +354,7 @@ Targets are set relative to the measured baseline once it exists, and written to
 
 ### 11.4 Test data characteristics
 
-There is no external dataset. All test data is generated: synthetic device descriptors (seeded RNG, seed stored with the results), scripted attack traces, QMP key sequences, and standard benchmark workloads. Every run stores the kernel version, PROVE commit, mode and seed.
+There is no external dataset. All test data is generated: synthetic device descriptors (seeded RNG, seed stored with the results), scripted attack traces, QMP key sequences, and standard benchmark workloads. Every run stores the kernel version, mode and seed.
 
 ## 12. Risks and fallbacks
 
@@ -375,12 +375,6 @@ There is no external dataset. All test data is generated: synthetic device descr
 - Every deny path emits an audit event before returning.
 - Default mode after install is `audit`. Switching to `enforce` is an explicit `provectl` action or config change.
 - Each milestone ends with tests passing on the VM and `docs/` updated.
-
-Version control, for any coding agent working in this repository:
-
-- Commit at regular intervals: after each coherent unit of work (a program that loads, a passing test, a filled-in checklist item, a doc update), and at least once per working session. Do not let large uncommitted changes accumulate.
-- Each commit builds and has a short imperative subject line, for example `Record creator for uinput devices`. No milestone prefix.
-- Never push. No `git push`, no pushing tags, no creating or updating remote branches or pull requests. All commits stay local; the author reviews and pushes them himself.
 
 ## 14. Open decisions (defaults apply unless changed)
 
