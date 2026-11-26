@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Synthetic device generator for the classification test (SPEC 11.2). Runs in the VM as
+"""Synthetic device generator for the classification test (SPEC 10.2). Runs in the VM as
 the unprivileged user, in audit mode.
 
 usage: gen_devices.py --seed S --uinput N --uhid M [--batch B]

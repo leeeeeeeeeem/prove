@@ -1,4 +1,4 @@
-// bench-register N: device registration latency (SPEC 11.3).
+// bench-register N: device registration latency (SPEC 10.3).
 // N times: set up a uinput keyboard and time the UI_DEV_CREATE ioctl, which runs
 // input_register_device() (and PROVE's fexit program) synchronously. Prints the median in ns.
 #define _GNU_SOURCE

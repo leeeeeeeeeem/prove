@@ -6,7 +6,7 @@ usage: qmp.py key <qcode> [--device ID] [--hold MS]   press and release one key
        qmp.py unplug <id>                             device_del
        qmp.py raw '<json command>'                    send one command, print the reply
 
-"Physical" input in the tests is produced here, i.e. by the hypervisor (SPEC section 11).
+"Physical" input in the tests is produced here, i.e. by the hypervisor (SPEC section 10).
 --device routes the key to one specific emulated keyboard (QEMU input device id).
 """
 import json, os, socket, sys, time

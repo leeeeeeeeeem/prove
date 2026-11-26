@@ -3,8 +3,6 @@
 //
 //   inject-helper pass <fd> <secs>   create a uinput keyboard, send its fd over the unix
 //                                    socket <fd> (SCM_RIGHTS), stay alive <secs> seconds
-//   inject-helper hold <secs>        create a uinput keyboard, print "created <fd>", then
-//                                    sleep in 100 ms steps (target for the ptrace case R1)
 //   inject-helper type <code>        create a uinput keyboard and press key <code> once
 #define _GNU_SOURCE
 #include <errno.h>
@@ -55,12 +53,6 @@ int main(int argc, char **argv) {
         nap(atol(argv[3]) * 1000);
         return 0;
     }
-    if (argc == 3 && !strcmp(argv[1], "hold")) {
-        int fd = create_keyboard();
-        printf("created %d\n", fd);
-        for (long i = 0; i < atol(argv[2]) * 10; i++) nap(100);
-        return 0;
-    }
     if (argc == 3 && !strcmp(argv[1], "type")) {
         int fd = create_keyboard(), code = atoi(argv[2]);
         printf("created %d\n", fd);
@@ -73,6 +65,6 @@ int main(int argc, char **argv) {
         nap(300);
         return 0;
     }
-    fprintf(stderr, "usage: inject-helper pass <fd> <secs> | hold <secs> | type <code>\n");
+    fprintf(stderr, "usage: inject-helper pass <fd> <secs> | type <code>\n");
     return 64;
 }

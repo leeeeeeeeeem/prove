@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Device classification test (SPEC 11.2).
+"""Device classification test (SPEC 10.2).
 
 usage: run_classify.py [--out DIR] [--seed S] [--uinput N] [--uhid M] [--hotplug-rounds R]
 

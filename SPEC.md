@@ -8,7 +8,7 @@ This file is the working contract for the repository. It defines the components,
 
 Two markers are used:
 
-- **[source]**: confirmed by reading the upstream Linux v6.12 source (section 15). The Debian kernel may carry patches, so M0 still confirms each one on the VM, but no surprise is expected.
+- **[source]**: confirmed by reading the upstream Linux v6.12 source (section 14). The Debian kernel may carry patches, so M0 still confirms each one on the VM, but no surprise is expected.
 - **[verify]**: an assumption about the running kernel or Debian 13 that only the target VM can answer. Resolved in milestone M0, outcome written to `docs/VERIFY.md`.
 
 ---
@@ -34,11 +34,8 @@ PROVE is not an anticheat. Cheat tools appear only as extra test adversaries.
 | Consent contract: `provd` + `prove-consent` + one demo requester | core | M3 |
 | Assistive mode: one allow-listed remapper accepted by the prompt | core | M3 |
 | Scripted attack suite, classification test, overhead measurements | core | M4 |
-| uhid enforcement and Bluetooth (`bluetoothd` allow-listed) | stretch | S1 |
+| uhid enforcement: creation and writes on `/dev/uhid` | stretch | S1 |
 | evdev-write injection counter | stretch | S2 |
-| Protected session (cgroup launcher, game case study) | stretch | S3 |
-| Bare-metal run | stretch | S4 |
-| LLM computer-use agent demonstration, recorded for the presentation | stretch | S5 |
 
 Non-goals: defending against root, `CAP_SYS_ADMIN`, `CAP_BPF`, hardware HID emulators, fake or overlaid prompts, XTest/Wayland/libei injection outside the prompt, behavioural (ML) classification.
 
@@ -46,7 +43,7 @@ Non-goals: defending against root, `CAP_SYS_ADMIN`, `CAP_BPF`, hardware HID emul
 
 - Trusted: kernel, boot chain, root, `provd`, `prove-consent`, allow-listed executables.
 - Attacker: an agent or cheat tool running as the desktop user. No root, no `CAP_SYS_ADMIN`/`CAP_BPF`, not in group `input`. It can open `/dev/uinput` but not `/dev/input/event*`.
-- Known residual risk, measured rather than fixed: a same-uid process hijacking an allow-listed tool or requester (ptrace, `LD_PRELOAD`, IPC), confused deputies.
+- Known residual risk, not fixed: a same-uid process hijacking an allow-listed tool or requester (ptrace, `LD_PRELOAD`, IPC), confused deputies. The attack suite measures two of these: `LD_PRELOAD` into an allow-listed tool (R2) and a hijacked requester (R3).
 
 Note: on stock Debian `/dev/uinput` is not user-accessible **[verify]**. The test VM grants the desktop user access (udev rule with `TAG+="uaccess"`), which is what Steam and remapper packages do on real desktops. This is the realistic precondition for the attack.
 
@@ -58,7 +55,7 @@ Note: on stock Debian `/dev/uinput` is not user-accessible **[verify]**. The tes
 | Kernel | Debian 6.12 series; exact `uname -r` and package version recorded in `docs/ENVIRONMENT.md` |
 | Hypervisor | QEMU (`virt` machine, HVF/KVM), 4 vCPU, 4 GB RAM, 20 GB disk (ext4 root) |
 | Desktop | GNOME on Wayland (default), plus an Xorg session for the XTest cases; installed by `vm/desktop.sh` on top of the headless image |
-| Language | Rust end to end, eBPF via Aya; C/libbpf is the fallback (section 12) |
+| Language | Rust end to end, eBPF via Aya |
 | Toolchain | stable Rust for userspace, nightly + `bpf-linker` for the eBPF crate, `bpftool`, pinned in `rust-toolchain.toml` and `Cargo.lock` |
 
 Kernel requirements, checked in M0 and recorded in `docs/VERIFY.md`:
@@ -110,11 +107,12 @@ vm/                        VM build and run scripts
 tests/attacks/             one script per attack case
 tests/classify/            device classification test
 tests/bench/               overhead and latency benchmarks
+tests/lib/, tests/fixtures/  attacker helpers and allow-listed test tools used by the cases
+tests/harness.py           SSH/QMP harness shared by the test runners
 tests/run_attacks.py       attack suite, both modes, writes results/
 tests/run_classify.py      classification test, writes results/
 tests/run_bench.py         overhead measurements, writes results/
 scripts/                   install and in-VM build scripts
-agent-demo/                LLM agent demonstration (S5, not yet written)
 docs/                      ENVIRONMENT.md, VERIFY.md, RESULTS.md
 ```
 
@@ -162,7 +160,7 @@ The device key is the input number parsed from the device name (`inputN`). The n
 | `grab` | fexit `input_grab_device` | If return value is 0: record current task as holder in `GRABS`. |
 | `release` | fentry `input_release_device` | Remove from `GRABS` unconditionally. All evdev clients of a device share one handle, and evdev only calls this function for the client that holds the grab, including on close and `EVIOCREVOKE` **[source]**. |
 | `ioctl_guard` | lsm `file_ioctl` and `file_ioctl_compat` | If file is uinput (char 10:223) and `cmd == UI_DEV_CREATE` (0x5501): look up current exe in `ALLOW_INJECT`; on miss emit `Denied` and return `-EPERM` in enforce mode, 0 in audit mode. |
-| `write_guard` | lsm `file_permission` | Early exit unless `mask & MAY_WRITE`, inode is a char device and rdev is uinput (core), uhid 10:239 (S1) or evdev major 13 (S2). Then the same allow-list check as above against the writer. |
+| `write_guard` | lsm `file_permission` | Early exit unless `mask & MAY_WRITE`, inode is a char device and rdev is uinput 10:223 (core) or uhid 10:239 (S1). Then the same allow-list check as above against the writer. Writes to evdev nodes are not guarded here; S2 counts them instead (`inject_count`). |
 | `inject_count` | fentry `input_inject_event` (S2) | For user tasks and `EV_KEY`/`EV_REL`/`EV_ABS` only: increment `inject_count`. |
 
 Classification rule, from device topology only (names, bus type and vendor/product IDs are attacker-chosen and never consulted):
@@ -171,7 +169,7 @@ Classification rule, from device topology only (names, bus type and vendor/produ
 - an ancestor is the uhid misc device (devt 10:239) → `Uhid`. The input device's parent is the HID device, whose parent is `uhid_misc.this_device` **[source]**;
 - otherwise → `Hardware`.
 
-Creator rule. The two paths differ (section 15, finding F1):
+Creator rule. The two paths differ (section 14, finding F1):
 
 - `Uinput`: the creator is the current task. `UI_DEV_CREATE` calls `input_register_device()` synchronously inside the ioctl **[source]**.
 - `Uhid`: the current task at registration is a kernel worker, because uhid defers `hid_add_device()` to a workqueue **[source]**. The creator is taken instead from `HID_CREATORS`, looked up by the input device's parent HID device. That entry was written when the `UHID_CREATE`/`UHID_CREATE2` write called `hid_allocate_device()` in the writer's own context **[source]**. If the lookup misses, the creator is recorded as unknown and the device is untrusted.
@@ -181,7 +179,7 @@ Cross-check: `ioctl_guard` sets a per-task marker while a `UI_DEV_CREATE` is in 
 
 The kernel side never emits key codes or event values; only labels, identities and counters.
 
-`write_guard` runs on every read and write in the system. The first three instructions must reject the common case (non-write, non-char-device); its cost is measured in section 11.3.
+`write_guard` runs on every read and write in the system. It rejects the common case (non-write, then any file other than uinput/uhid) before doing any map lookup; its cost is measured in section 10.3.
 
 ### 7.3 Pinning
 
@@ -212,7 +210,9 @@ sha256 = "…"
 flags  = ["inject", "assistive"]     # assistive = its uinput device may satisfy an assistive-mode prompt
 ```
 
-Verification at load, entry rejected (and logged) on any failure: file and every parent directory owned by root and not writable by group or others; SHA-256 matches; then `(dev, ino)` goes into the map. `provd` reloads on `SIGHUP` or `provectl reload`. Identification by systemd unit (cgroup id) is optional and only added if time allows.
+Verification at load, entry rejected (and logged) on any failure: file and every parent directory owned by root and not writable by group or others; SHA-256 matches; then `(dev, ino)` goes into the map. `provd` reloads on `SIGHUP` or `provectl reload`. Executables are identified by `(dev, ino)` only; the cgroup id is recorded for audit but never used for decisions.
+
+Bluetooth HID devices are created by `bluetoothd` through `/dev/uhid`, so with S1 enforcement `bluetoothd` must be on the allow-list on systems that use Bluetooth keyboards. The example allow-list documents this entry; it is not exercised by the tests.
 
 Audit: every `AuditEvent` is written to journald with structured fields (`PROVE_EVENT`, `PROVE_CLASS`, `PROVE_PID`, `PROVE_EXE`, `PROVE_UID`, `PROVE_CGROUP`, `PROVE_DEVICE`, `PROVE_VERDICT`). `provd` resolves `ExeId` to a path and hash where it can.
 
@@ -259,19 +259,9 @@ Devices hot-plugged during a prompt are ignored.
 
 ### 8.5 `prove-requester-demo`
 
-A small GTK or terminal program that sends a request, shows action + name + challenge key, and prints the verdict. It stands in for a polkit agent or an agent harness's permission layer, and is what the attack suite and the agent demo approve against.
+A small terminal program that sends a request, shows action + name + challenge key, and prints the verdict (`--json` for machine-readable output). It stands in for a polkit agent or an agent harness's permission layer, and is what the attack suite approves against.
 
-## 9. Agent demonstration (`agent-demo/`, stretch S5)
-
-An LLM computer-use harness runs as the desktop user with an input tool backed by uinput (`ydotool` or python-evdev `UInput`) and by XTest (`xdotool`). Its permission layer is `prove-requester-demo`, running outside the agent's tool sandbox. Scenario: a document containing a prompt injection instructs the agent to perform a gated action and press the approval key itself. Record (screen capture + journald) three runs:
-
-1. Baseline: the gated action is protected by a conventional terminal prompt instead of the PROVE consent contract. The agent's uinput key reaches the prompt and the approval is forged.
-2. PROVE in `audit` mode: the agent's uinput device is created and its keys reach the desktop (logged in journald), but the prompt is not approved, because consent checks device records independently of the enforcement mode (section 11). The prompt times out.
-3. PROVE in `enforce` mode: device creation is denied with `EPERM` and the prompt times out.
-
-If a real harness proves infeasible in the VM, downgrade to a scripted agent that replays the same tool calls.
-
-## 10. Milestones
+## 9. Milestones
 
 | ID | Deliverable | Acceptance |
 |---|---|---|
@@ -280,8 +270,8 @@ If a real harness proves infeasible in the VM, downgrade to a scripted agent tha
 | M2 | uinput enforcement + allow-list + pinning | Non-allow-listed creation and writes get `EPERM` in enforce mode and are only logged in audit mode; enforcement holds after `kill -9 provd` |
 | M3 | Consent contract + assistive mode | Physical key approves; uinput/XTest/Wayland keys never approve; remapper approves in assistive mode only |
 | M4 | Attack suite, classification test, benchmarks | `tests/run_attacks.py`, `tests/run_classify.py` and `tests/run_bench.py` write `results/`; tables in `docs/RESULTS.md` |
-| S1–S4 | Stretch items | Only after M4 is complete |
-| S5 | Agent demo | Recorded demo (screen capture + journald): baseline prompt forged, audit and enforce mode not approved (section 9). Done before the presentation |
+| S1 | uhid enforcement | Non-allow-listed uhid creation and writes get `EPERM` in enforce mode (A13) |
+| S2 | evdev-write injection counter | Writes to a hardware keyboard's evdev node are counted and the prompt refuses that device (S-b) |
 
 M0 verification checklist (each line gets result, evidence and fallback in `docs/VERIFY.md`):
 
@@ -299,13 +289,13 @@ M0 verification checklist (each line gets result, evidence and fallback in `docs
 | 10 | Default Debian permissions of `/dev/uinput`, `/dev/uhid`, `/dev/input/event*` | open **[verify]** |
 | 11 | Aya can pin LSM and fentry links and re-attach to pins after a daemon restart | open **[verify]** |
 | 12 | `EVIOCGRAB` from `prove-consent` hides the key from GNOME/Wayland | open **[verify]** |
-| 13 | evdev minor numbers beyond the legacy 64–95 range (needed only for the S2 fast path) | open **[verify]** |
+| 13 | evdev minor numbers beyond the legacy 64–95 range (would matter only if evdev nodes were matched by device number; S2 hooks `input_inject_event` instead) | open **[verify]** |
 
-## 11. Validation and evaluation
+## 10. Validation and evaluation
 
 All tests run from the host through SSH and QMP, in both `audit` (baseline) and `enforce` mode, and write machine-readable results to `results/<date>/`. "Physical" keys are sent through QMP `send-key`/`input-send-event`, so in the VM they originate from the hypervisor; this is stated as a limitation.
 
-### 11.1 Attack suite (`tests/attacks/`)
+### 10.1 Attack suite (`tests/attacks/`)
 
 Each case is a standalone script with a declared expected outcome. A case passes if the observed outcome equals the expected one.
 
@@ -322,25 +312,25 @@ Each case is a standalone script with a declared expected outcome. A case passes
 | A9 | Attacker connects to the consent socket as a non-listed requester, or replays a result | Rejected |
 | A10 | Kill `provd` then inject | Injection still denied; consent fails closed |
 | A11 | Replace an allow-listed binary as the desktop user | Impossible by file permissions; entry rejected if made writable |
-| A12 | 32-bit compat ioctl, `writev`, io_uring write, `splice`, `sendfile` | Denied (`splice` fails with `EINVAL` even without PROVE, as uinput has no `splice_write`) |
-| A13 | uhid device created by the attacker (provenance only, before S1) | Classed `Uhid` with the attacker as creator, not a kernel worker; not accepted by the prompt |
-| R1 | ptrace an allow-listed tool and inject through it | **Succeeds** (residual risk) |
-| R2 | `LD_PRELOAD` / IPC confused deputy on an allow-listed tool | **Succeeds** (residual risk) |
-| R3 | Hijacked requester | **Succeeds** (residual risk) |
-| S-a | uhid device creation and input (S1) | Denied when S1 is implemented; otherwise recorded as undetected-by-enforcement but classed `Uhid` |
+| A12 | `writev`, io_uring write, `splice`, `sendfile`, legacy set-up write; 32-bit compat ioctl | Denied (`splice` fails with `EINVAL` even without PROVE, as uinput has no `splice_write`). The compat ioctl cannot be exercised on the arm64 VM, which runs no 32-bit programs; the case checks that the hook is attached |
+| A13 | uhid keyboard created by the attacker (S1) | Creation denied (`EPERM`); in audit mode classed `Uhid` with the attacker as creator, not a kernel worker; never accepted by the prompt |
+| R2 | `LD_PRELOAD` into an allow-listed tool | **Injection succeeds** (residual risk); a `physical` prompt is still not approved |
+| R3 | Hijacked requester | **Succeeds**: the attacker is accepted as a requester (residual risk) |
 | S-b | Write to `/dev/input/eventN` with granted ACL (S2) | Counter increments; prompt rejects the device |
 
-Positive cases (must pass in both modes): P1 physical key on each of the 4 QEMU devices approves a `physical` prompt; P2 allow-listed remapper (keyd or equivalent) approves an `assistive` prompt; P3 the same remapper is rejected by a `physical` prompt; P4 wrong key and timeout produce `denied`/`timeout`.
+Positive cases (must pass in both modes): P1 physical key on each of the 3 QEMU keyboards approves a `physical` prompt; P2 allow-listed remapper (keyd) approves an `assistive` prompt; P3 the same remapper is rejected by a `physical` prompt; P4 wrong key and timeout produce `timeout`, and a second concurrent prompt is refused (`busy`).
+
+In total the suite has 19 cases, each run in both modes.
 
 In audit mode, A1, A2 and A5 are expected to succeed at injecting (this is the baseline that shows the attack is real), but the prompt must still reject them because consent checks records independently of the enforcement mode.
 
-### 11.2 Classification test (`tests/classify/`)
+### 10.2 Classification test (`tests/classify/`)
 
 - Hardware set: two USB keyboards, USB tablet, virtio keyboard, hot-plugged and unplugged repeatedly through QMP.
-- Synthetic set: at least 500 uinput devices (and uhid devices for S1) with randomised names, bus types, vendor/product IDs and capability sets, half of them copying the identity of a real device.
+- Synthetic set: at least 500 uinput devices and 100 uhid devices with randomised names, bus types, vendor/product IDs and capability sets, half of them copying the identity of a real device.
 - Metric: confusion matrix over classes. Target: zero injected devices classed `Hardware`, zero real devices classed injected. Creator attribution is checked against the pid and executable the test itself used.
 
-### 11.3 Overhead (`tests/bench/`)
+### 10.3 Overhead (`tests/bench/`)
 
 Three configurations: PROVE not loaded, audit, enforce. At least 10 runs each, report median and spread.
 
@@ -350,25 +340,26 @@ Three configurations: PROVE not loaded, audit, enforce. At least 10 runs each, r
 - Per-program run time from `bpftool prog show` with `kernel.bpf_stats_enabled=1`.
 - Device registration latency with and without the fexit hook.
 
-Targets are set relative to the measured baseline once it exists, and written to `docs/RESULTS.md`; no absolute numbers are promised in advance.
+Results are reported relative to the unloaded baseline in `docs/RESULTS.md`; no absolute targets are set.
 
-### 11.4 Test data characteristics
+### 10.4 Test data characteristics
 
 There is no external dataset. All test data is generated: synthetic device descriptors (seeded RNG, seed stored with the results), scripted attack traces, QMP key sequences, and standard benchmark workloads. Every run stores the kernel version, mode and seed.
 
-## 12. Risks and fallbacks
+## 11. Risks
 
-| Risk | Fallback |
+Risks identified before implementation, and what happened.
+
+| Risk | Outcome |
 |---|---|
-| Aya has limited CO-RE support for reading kernel struct fields from Rust; bindings are generated from the VM's BTF and tied to that kernel build | Pin the kernel package in the VM. If field access becomes unworkable, write the eBPF side in C with libbpf and keep userspace in Rust (libbpf-rs) |
-| BPF LSM cannot be enabled on the Debian kernel | Rebuild the Debian kernel with `bpf` in `CONFIG_LSM`; record as an environment change |
-| An input-core function is inlined or not attachable | Use the nearest attachable caller/callee, or a kprobe; record the substitution |
-| Parentless non-uinput devices exist | The `UnknownVirtual` class and ioctl marker (section 7.2) already cover this; list such devices in `docs/RESULTS.md` |
-| `file_permission` overhead is significant | Narrow the fast path further; as a last resort attach enforcement to uinput-specific functions with `fmod_ret` where the kernel allows it |
-| Real agent harness does not run in the VM | Scripted agent replaying the same tool calls (section 9) |
-| `EVIOCGRAB` conflicts with the compositor in unexpected ways | Document behaviour per compositor; run the consent tests on the Xorg session as a second data point |
+| Aya has limited CO-RE support for reading kernel struct fields from Rust | `provd` reads the offsets of the fields it needs from the running kernel's BTF at load time and writes them into the programs as read-only data (`provd/src/offsets.rs`) |
+| BPF LSM cannot be enabled on the Debian kernel | Did not occur: enabled by default (`docs/VERIFY.md` item 1) |
+| An input-core function is inlined or not attachable | All input-core functions attach with fentry/fexit. The HID functions live in a module, where Aya cannot attach fentry/fexit, so they use a kretprobe and a kprobe (section 7.2) |
+| Parentless non-uinput devices exist | None found (`docs/VERIFY.md` item 4); the `UnknownVirtual` class and ioctl marker (section 7.2) remain in place |
+| `file_permission` overhead is significant | Measured at about 31 ns per call (`docs/RESULTS.md`); left as is |
+| `EVIOCGRAB` conflicts with the compositor | Did not occur on GNOME Wayland or GNOME Xorg (`docs/VERIFY.md` item 12) |
 
-## 13. Conventions
+## 12. Conventions
 
 - No `unsafe` in userspace crates except in clearly marked FFI wrappers; `unsafe` in `prove-ebpf` is limited to kernel reads through helper functions in one module.
 - All decisions in eBPF are made on `ExeId`, never on `comm` or paths.
@@ -376,14 +367,13 @@ There is no external dataset. All test data is generated: synthetic device descr
 - Default mode after install is `audit`. Switching to `enforce` is an explicit `provectl` action or config change.
 - Each milestone ends with tests passing on the VM and `docs/` updated.
 
-## 14. Open decisions (defaults apply unless changed)
+## 13. Decisions
 
 1. Remapper used for assistive mode: **keyd**.
-2. Requester UI: **terminal program** first, GTK window if time allows.
-3. Agent harness: **an open computer-use harness driving the VM desktop**, model and harness chosen at S5.
-4. Systemd-unit-based identification: **not implemented**.
+2. Requester UI: **terminal program**.
+3. Executable identification: **`(dev, ino)` only**; no identification by systemd unit.
 
-## 15. Source review (Linux v6.12, upstream)
+## 14. Source review (Linux v6.12, upstream)
 
 Done by reading the upstream v6.12 tree before any code was written. Nothing here was run. Files read: `drivers/input/input.c`, `drivers/input/evdev.c`, `drivers/input/misc/uinput.c`, `drivers/hid/uhid.c`, `drivers/hid/hid-input.c`, `fs/read_write.c`, `fs/splice.c`, `fs/ioctl.c`, `io_uring/rw.c`, `include/linux/miscdevice.h`.
 

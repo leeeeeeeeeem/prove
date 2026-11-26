@@ -1,4 +1,4 @@
-// bench-write: syscall micro-benchmarks for the file_permission hook (SPEC 11.3).
+// bench-write: syscall micro-benchmarks for the file_permission hook (SPEC 10.3).
 // Replaces lmbench's lat_syscall / lat_ctx, which Debian 13 does not package.
 //
 //   bench-write null N     N one-byte write() calls to /dev/null

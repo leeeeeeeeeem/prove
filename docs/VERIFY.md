@@ -1,6 +1,6 @@
 # M0 verification checklist
 
-The assumptions marked **[verify]** in SPEC section 10, resolved against the target VM
+The assumptions marked **[verify]** in SPEC section 9, resolved against the target VM
 (Debian 13, kernel `6.12.116+deb13-arm64`). Checked on 2026-11-23. Each item: result, evidence,
 and the fallback that was prepared in case it failed.
 
@@ -18,7 +18,7 @@ and the fallback that was prepared in case it failed.
 | 10 | Default permissions of `/dev/uinput`, `/dev/uhid`, `/dev/input/event*` | **Confirmed** | Stock Debian ships uinput/uhid without a `uaccess` tag, so a non-root user not in `input` cannot open them. This is the attack precondition. The test VM's udev rule (`70-prove-test-uinput.rules`) grants the desktop user access via group `prove-attacker` (`crw-rw---- root prove-attacker`), as Steam/remapper packages do. evdev nodes are `root:input 0660` | n/a |
 | 11 | Aya pins LSM + fentry links and re-attaches after a daemon restart | **Yes** | After `systemctl restart provd` (pid changed), the same 10 programs stay attached to the same pins; `provd` re-attaches rather than reloading. Attack A10: injection stays denied while `provd` is dead, because the pinned maps/programs survive its absence | n/a |
 | 12 | `EVIOCGRAB` from `prove-consent` hides the key from the compositor | **Yes, on GNOME Wayland and GNOME Xorg** | Checked 2026-11-24 with `vm/desktop.sh` + `vm/run.sh --gui`: with a GNOME text field focused, two control `a` presses through QMP reach the field; the challenge key pressed during the prompt approves it (`KEY_7`, `KEY_6` on input1) but never appears in the field. | Run the consent tests on an Xorg session as a second data point (done) |
-| 13 | evdev minor numbers beyond the legacy 64–95 range | **None present** | All current evdev nodes are minors 64–68 (`/dev/input/event0‑4`), inside the legacy range. No device exceeds 95 on this VM | Only relevant to the S2 fast path; handled there if a higher minor appears |
+| 13 | evdev minor numbers beyond the legacy 64–95 range | **None present** | All current evdev nodes are minors 64–68 (`/dev/input/event0‑4`), inside the legacy range. No device exceeds 95 on this VM | n/a: nothing matches evdev nodes by minor number (S2 hooks `input_inject_event`) |
 
 ## Notes
 
@@ -29,4 +29,4 @@ and the fallback that was prepared in case it failed.
   installed for the purpose (Wayland and Xorg sessions).
 - Mode is read from `provd.toml` at start-up (default `audit`) and is settable at runtime with
   `provectl mode`; the runtime value lives in the pinned `CONFIG` map, so enforcement persists
-  across a `provd` crash (A10) while a clean restart re-reads the file (SPEC section 13).
+  across a `provd` crash (A10) while a clean restart re-reads the file (SPEC section 12).

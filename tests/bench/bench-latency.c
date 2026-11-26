@@ -1,4 +1,4 @@
-// bench-latency N: input latency through the kernel input core (SPEC 11.3).
+// bench-latency N: input latency through the kernel input core (SPEC 10.3).
 // Creates a uinput keyboard, opens its evdev node, and N times measures the time from just
 // before the write() of a key event to the return of the read() that delivers it.
 // Run as root (needs the evdev node). Prints "median_ns p99_ns".

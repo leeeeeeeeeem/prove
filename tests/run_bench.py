@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Overhead measurements (SPEC 11.3) in three configurations: PROVE not loaded, audit, enforce.
+"""Overhead measurements (SPEC 10.3) in three configurations: PROVE not loaded, audit, enforce.
 
 usage: run_bench.py [--out DIR] [--runs N] [--quick]
 Writes bench.json into DIR: every raw sample plus median / min / max / IQR per metric.

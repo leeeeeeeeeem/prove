@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Install a minimal GNOME desktop (Wayland + Xorg) in the running VM, with GDM autologin.
-# Used for SPEC M0 item 12 and the S5 agent demo. Boot afterwards with: vm/run.sh --gui
+# Used for SPEC M0 checklist item 12. Boot afterwards with: vm/run.sh --gui
 # Snapshot the disk first: qemu-img snapshot -c headless-m4 vm/images/prove.qcow2
 set -euo pipefail
 source "$(dirname "$0")/config.sh"

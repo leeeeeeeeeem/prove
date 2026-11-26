@@ -57,8 +57,9 @@ vm/ssh.sh sudo provectl status
 `--test-vm` flag gives the desktop user access to `/dev/uinput` and `/dev/uhid`, which is the
 precondition for the attacks.
 
-For a desktop session (needed for the agent demo), run `vm/desktop.sh` once on a running VM, then
-reboot it with `vm/stop.sh && vm/run.sh --gui`.
+For a GNOME desktop session (used to check that the consent grab hides the challenge key from the
+compositor, `docs/VERIFY.md` item 12), run `vm/desktop.sh` once on a running VM, then reboot it
+with `vm/stop.sh && vm/run.sh --gui`. The test suites do not need it.
 
 ## Tests
 
@@ -85,9 +86,6 @@ as hardware, and the hot path costs about 31 ns per write.
 | M4 attack suite, classification, benchmarks | done |
 | S1 uhid enforcement | done |
 | S2 evdev-write injection counter | done |
-| S3 protected session | not started |
-| S4 bare-metal run | not started |
-| S5 agent demo | planned, for the presentation |
 
 ## Docs
 

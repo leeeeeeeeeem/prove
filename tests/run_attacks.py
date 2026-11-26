@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the attack suite (SPEC 11.1) in audit and enforce mode.
+"""Run the attack suite (SPEC 10.1) in audit and enforce mode.
 
 usage: run_attacks.py [--out DIR] [--mode audit|enforce] [--only ID[,ID...]]
 Writes attacks.json into DIR and prints one line per case. Exit status 1 if any case fails.

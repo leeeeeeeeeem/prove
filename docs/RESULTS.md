@@ -1,6 +1,6 @@
 # Results
 
-Validation and evaluation of PROVE (SPEC section 11). This file records the run of
+Validation and evaluation of PROVE (SPEC section 10). This file records the run of
 2026-11-23. Rerunning the test scripts writes the same data as JSON to a local, untracked
 `results/<date>/` directory.
 
@@ -18,7 +18,7 @@ All tests run from the host over SSH and QMP. "Physical" key presses are injecte
 `input-send-event`, so in the VM they originate from the hypervisor rather than a real device;
 this is the one unavoidable gap between the test rig and a bare-metal desktop.
 
-## Attack suite (SPEC 11.1)
+## Attack suite (SPEC 10.1)
 
 `tests/run_attacks.py`, both modes. **38/38 runs pass (19 cases × audit and enforce.)** The
 observed column below is the enforce-mode run.
@@ -42,17 +42,15 @@ observed column below is the enforce-mode run.
 | P1 | physical key on each hardware keyboard | approved on usbkbd0, usbkbd1, viokbd0 |
 | P2/P3 | allow-listed remapper (keyd), assistive vs physical | assistive approved; physical denied |
 | P4 | wrong key, timeout, concurrent prompt | wrong key → timeout; second prompt refused (busy) |
-| R1 | ptrace an allow-listed tool | residual risk, not implemented |
 | R2 | `LD_PRELOAD` into an allow-listed tool | injection succeeds (residual risk); physical prompt still not approved |
 | R3 | hijacked requester | attacker accepted as requester (residual risk) |
 
 In audit mode the same cases pass: A1, A2, A5 and S-b succeed at *injecting* (the baseline that
 shows the attack is real), but every prompt still rejects them, because consent checks the device
 record independently of the enforcement mode. R2 and R3 are the documented residual risks and
-"pass" by succeeding as expected. R1 (ptrace) is listed in the threat model as a residual risk and
-has no implemented case.
+"pass" by succeeding as expected.
 
-## Classification (SPEC 11.2)
+## Classification (SPEC 10.2)
 
 `tests/run_classify.py --seed 20266401 --uinput 500 --uhid 100 --hotplug-rounds 10`. **PASS.**
 
@@ -74,7 +72,7 @@ The hardware count (45) is the four emulated devices plus the power button, acro
 rounds. Spoofing a real keyboard's name, bus, and vendor/product never changed the class, because
 classification uses device topology only, never attacker-chosen identity fields.
 
-## Overhead (SPEC 11.3)
+## Overhead (SPEC 10.3)
 
 `tests/run_bench.py --runs 10`, three configurations (PROVE unloaded / audit / enforce). Medians
 over 10 runs, with inter-quartile range.
@@ -116,5 +114,5 @@ Reading the numbers:
 
 Caveat: these are measured in a VM under HVF on a laptop. The within-run spread is small (tight
 IQRs), but the *baseline itself* shifts between sessions with host load, so treat the percentages
-as indicative of the shape of the cost, not as bare-metal figures. A bare-metal run (SPEC S4)
-would be needed for absolute numbers.
+as indicative of the shape of the cost, not as bare-metal figures. Absolute numbers would need a
+bare-metal run.
