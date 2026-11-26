@@ -356,7 +356,7 @@ Risks identified before implementation, and what happened.
 | BPF LSM cannot be enabled on the Debian kernel | Did not occur: enabled by default (`docs/VERIFY.md` item 1) |
 | An input-core function is inlined or not attachable | All input-core functions attach with fentry/fexit. The HID functions live in a module, where Aya cannot attach fentry/fexit, so they use a kretprobe and a kprobe (section 7.2) |
 | Parentless non-uinput devices exist | None found (`docs/VERIFY.md` item 4); the `UnknownVirtual` class and ioctl marker (section 7.2) remain in place |
-| `file_permission` overhead is significant | Measured at about 31 ns per call (`docs/RESULTS.md`); left as is |
+| `file_permission` overhead is significant | Measured at about 32 ns per call (`docs/RESULTS.md`); left as is |
 | `EVIOCGRAB` conflicts with the compositor | Did not occur on GNOME Wayland or GNOME Xorg (`docs/VERIFY.md` item 12) |
 
 ## 12. Conventions

@@ -1,0 +1,614 @@
+{
+ "info": {
+  "kernel": "6.12.116+deb13-arm64"
+ },
+ "results": [
+  {
+   "id": "A1",
+   "title": "uinput keyboard types the challenge key",
+   "mode": "audit",
+   "expected": "injection succeeds (baseline), prompt not approved",
+   "observed": "attacker: created 9040; wrote; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "attacker": "created 9040\nwrote\n",
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A2",
+   "title": "uinput keyboard with the identity of a real USB keyboard",
+   "mode": "audit",
+   "expected": "classed uinput (never hardware), prompt not approved",
+   "observed": "attacker: created 9131 wrote; class: ['uinput']; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A3",
+   "title": "XTest key (xdotool) at the prompt",
+   "mode": "audit",
+   "expected": "injection not blocked, prompt not approved",
+   "observed": "xdotool: sent; prompt: timeout",
+   "pass": true,
+   "seconds": 6.3,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A4",
+   "title": "Wayland virtual keyboard (wtype) at the prompt",
+   "mode": "audit",
+   "expected": "injection not blocked, prompt not approved",
+   "observed": "wtype: sent; prompt: timeout",
+   "pass": true,
+   "seconds": 7.3,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A5",
+   "title": "fd passing from an allow-listed helper",
+   "mode": "audit",
+   "expected": "write succeeds (baseline), prompt not approved",
+   "observed": "attacker: got-fd; write OK; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A6",
+   "title": "device created before provd starts",
+   "mode": "audit",
+   "expected": "classed preexisting, prompt not approved",
+   "observed": "class: ['preexisting']; attacker: wrote; prompt: timeout",
+   "pass": true,
+   "seconds": 7.3,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A7",
+   "title": "device creation racing prompt set-up",
+   "mode": "audit",
+   "expected": "no prompt approved",
+   "observed": "attacker: race created=147 denied=0; prompts: ['timeout', 'timeout', 'timeout']",
+   "pass": true,
+   "seconds": 18.2,
+   "detail": {}
+  },
+  {
+   "id": "A8",
+   "title": "attacker holds EVIOCGRAB on the keyboards",
+   "mode": "audit",
+   "expected": "prompt denied even for a physical key",
+   "observed": "attacker: grabbed 5; prompt: denied (input1 is grabbed by a process this prompt does not accept)",
+   "pass": true,
+   "seconds": 7.6,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "input1 is grabbed by a process this prompt does not accept",
+     "verdict": "denied"
+    }
+   }
+  },
+  {
+   "id": "A9",
+   "title": "non-listed requester / result forgery",
+   "mode": "audit",
+   "expected": "request rejected; socket cannot be replaced",
+   "observed": "reply: error (requester is not authorised); unlink PermissionError; create PermissionError",
+   "pass": true,
+   "seconds": 1.1,
+   "detail": {
+    "raw": "reply {\"type\":\"result\",\"nonce\":\"\",\"action_sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"verdict\":\"error\",\"reason\":\"requester is not authorised\"}\nunlink PermissionError\ncreate PermissionError\n"
+   }
+  },
+  {
+   "id": "A10",
+   "title": "kill provd, then inject",
+   "mode": "audit",
+   "expected": "consent fails closed (injection allowed as in baseline)",
+   "observed": "provd: dead; attacker: created 9335; wrote; prompt: error",
+   "pass": true,
+   "seconds": 4.5,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "connecting to /run/prove/consent.sock (is provd running?): Connection refused (os error 111)",
+     "verdict": "error"
+    }
+   }
+  },
+  {
+   "id": "A11",
+   "title": "replace an allow-listed binary",
+   "mode": "audit",
+   "expected": "replacement impossible; writable entry rejected",
+   "observed": "user replace: blocked; writable entry: rejected; its use: created 3; wrote",
+   "pass": true,
+   "seconds": 3.3,
+   "detail": {
+    "log": "allow-inject: entry \"ww\" (/usr/libexec/prove-test/world-writable-tool) rejected: /usr/libexec/prove-test/world-writable-tool is writable by group or others\nallow-lists loaded: 5 tool(s), 1 requester(s)\n"
+   }
+  },
+  {
+   "id": "A12",
+   "title": "writev, io_uring, splice, sendfile, legacy set-up",
+   "mode": "audit",
+   "expected": "write, writev, io_uring succeed (baseline); splice/sendfile EINVAL",
+   "observed": "got-fd; write OK; writev OK; uring OK; splice EINVAL; sendfile EINVAL; legacy set-up: created 9396; compat ioctl: not runnable on arm64 host, hook attached; prompt: timeout",
+   "pass": true,
+   "seconds": 5.8,
+   "detail": {
+    "ops": {
+     "write": "OK",
+     "writev": "OK",
+     "uring": "OK",
+     "splice": "EINVAL",
+     "sendfile": "EINVAL"
+    }
+   }
+  },
+  {
+   "id": "A13",
+   "title": "uhid keyboard created by the attacker (also S-a)",
+   "mode": "audit",
+   "expected": "classed uhid with the attacker as creator, prompt not approved",
+   "observed": "class: uhid; creator: python3(9408), attacker pid 9408; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "record": {
+     "device": "input160",
+     "class": "uhid",
+     "pid": "9408",
+     "uid": "1000",
+     "comm": "python3",
+     "exe": "/usr/bin/python3.13",
+     "grab": "-",
+     "injected": "0",
+     "name": "prove-a13-uhid"
+    },
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "P1",
+   "title": "physical key on each hardware keyboard",
+   "mode": "audit",
+   "expected": "approved on every keyboard",
+   "observed": "usbkbd0: approved; usbkbd1: approved; viokbd0: approved",
+   "pass": true,
+   "seconds": 20.5,
+   "detail": {
+    "usbkbd0": {
+     "event": "result",
+     "reason": "KEY_F2 pressed on input2",
+     "verdict": "approved"
+    },
+    "usbkbd1": {
+     "event": "result",
+     "reason": "KEY_F6 pressed on input161",
+     "verdict": "approved"
+    },
+    "viokbd0": {
+     "event": "result",
+     "reason": "KEY_F11 pressed on input163",
+     "verdict": "approved"
+    }
+   }
+  },
+  {
+   "id": "P2/P3",
+   "title": "allow-listed remapper (keyd): assistive vs physical prompt",
+   "mode": "audit",
+   "expected": "assistive prompt approved; physical prompt denied",
+   "observed": "assistive: approved (KEY_0 pressed on input167); physical: denied (input163 is grabbed by a process this prompt does not accept)",
+   "pass": true,
+   "seconds": 3.6,
+   "detail": {
+    "assistive": {
+     "event": "result",
+     "reason": "KEY_0 pressed on input167",
+     "verdict": "approved"
+    },
+    "physical": {
+     "event": "result",
+     "reason": "input163 is grabbed by a process this prompt does not accept",
+     "verdict": "denied"
+    }
+   }
+  },
+  {
+   "id": "P4",
+   "title": "wrong key, timeout, concurrent prompt",
+   "mode": "audit",
+   "expected": "wrong key ignored -> timeout; second prompt refused (busy)",
+   "observed": "wrong key then silence: timeout; concurrent request: error (busy)",
+   "pass": true,
+   "seconds": 127.0,
+   "detail": {}
+  },
+  {
+   "id": "S-b",
+   "title": "write to /dev/input/eventN of a hardware keyboard",
+   "mode": "audit",
+   "expected": "injection counted; prompt rejects the device",
+   "observed": "attacker: injected 5; inject_count 0 -> 6; physical press: not needed; prompt: denied (record of input165 changed)",
+   "pass": true,
+   "seconds": 2.0,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "record of input165 changed",
+     "verdict": "denied"
+    }
+   }
+  },
+  {
+   "id": "R2",
+   "title": "LD_PRELOAD into an allow-listed tool",
+   "mode": "audit",
+   "expected": "injection SUCCEEDS (residual risk); physical prompt still not approved",
+   "observed": "attacker: evil: created; evil: wrote; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "R3",
+   "title": "hijacked requester (LD_PRELOAD)",
+   "mode": "audit",
+   "expected": "attacker is accepted as the requester: SUCCEEDS (residual risk)",
+   "observed": "provd answered the hijacked requester with: challenge",
+   "pass": true,
+   "seconds": 1.1,
+   "detail": {
+    "raw": "evil: reply {\"type\":\"challenge\",\"key\":\"KEY_F6\",\"timeout_ms\":4000}\n"
+   }
+  },
+  {
+   "id": "A1",
+   "title": "uinput keyboard types the challenge key",
+   "mode": "enforce",
+   "expected": "creation denied (EPERM), prompt not approved",
+   "observed": "attacker: create EPERM; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "attacker": "create EPERM\n",
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A2",
+   "title": "uinput keyboard with the identity of a real USB keyboard",
+   "mode": "enforce",
+   "expected": "creation denied; never classed hardware",
+   "observed": "attacker: create EPERM; class: -; prompt: timeout",
+   "pass": true,
+   "seconds": 12.0,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A3",
+   "title": "XTest key (xdotool) at the prompt",
+   "mode": "enforce",
+   "expected": "injection not blocked, prompt not approved",
+   "observed": "xdotool: sent; prompt: timeout",
+   "pass": true,
+   "seconds": 145.8,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A4",
+   "title": "Wayland virtual keyboard (wtype) at the prompt",
+   "mode": "enforce",
+   "expected": "injection not blocked, prompt not approved",
+   "observed": "wtype: sent; prompt: timeout",
+   "pass": true,
+   "seconds": 7.2,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A5",
+   "title": "fd passing from an allow-listed helper",
+   "mode": "enforce",
+   "expected": "write denied (EPERM), prompt not approved",
+   "observed": "attacker: got-fd; write EPERM; prompt: timeout",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A6",
+   "title": "device created before provd starts",
+   "mode": "enforce",
+   "expected": "classed preexisting, write denied, prompt not approved",
+   "observed": "class: ['preexisting']; attacker: write EPERM; prompt: timeout",
+   "pass": true,
+   "seconds": 100.5,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "A7",
+   "title": "device creation racing prompt set-up",
+   "mode": "enforce",
+   "expected": "no prompt approved (all creations denied)",
+   "observed": "attacker: race created=0 denied=2639; prompts: ['timeout', 'timeout', 'timeout']",
+   "pass": true,
+   "seconds": 238.5,
+   "detail": {}
+  },
+  {
+   "id": "A8",
+   "title": "attacker holds EVIOCGRAB on the keyboards",
+   "mode": "enforce",
+   "expected": "prompt denied even for a physical key",
+   "observed": "attacker: grabbed 5; prompt: denied (input163 is grabbed by a process this prompt does not accept)",
+   "pass": true,
+   "seconds": 16.7,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "input163 is grabbed by a process this prompt does not accept",
+     "verdict": "denied"
+    }
+   }
+  },
+  {
+   "id": "A9",
+   "title": "non-listed requester / result forgery",
+   "mode": "enforce",
+   "expected": "request rejected; socket cannot be replaced",
+   "observed": "reply: error (requester is not authorised); unlink PermissionError; create PermissionError",
+   "pass": true,
+   "seconds": 1.1,
+   "detail": {
+    "raw": "reply {\"type\":\"result\",\"nonce\":\"\",\"action_sha256\":\"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855\",\"verdict\":\"error\",\"reason\":\"requester is not authorised\"}\nunlink PermissionError\ncreate PermissionError\n"
+   }
+  },
+  {
+   "id": "A10",
+   "title": "kill provd, then inject",
+   "mode": "enforce",
+   "expected": "injection still denied; consent fails closed",
+   "observed": "provd: dead; attacker: create EPERM; prompt: error",
+   "pass": true,
+   "seconds": 3.7,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "connecting to /run/prove/consent.sock (is provd running?): Connection refused (os error 111)",
+     "verdict": "error"
+    }
+   }
+  },
+  {
+   "id": "A11",
+   "title": "replace an allow-listed binary",
+   "mode": "enforce",
+   "expected": "replacement impossible; writable entry rejected",
+   "observed": "user replace: blocked; writable entry: rejected; its use: create EPERM",
+   "pass": true,
+   "seconds": 2.6,
+   "detail": {
+    "log": "allow-inject: entry \"ww\" (/usr/libexec/prove-test/world-writable-tool) rejected: /usr/libexec/prove-test/world-writable-tool is writable by group or others\nallow-lists loaded: 5 tool(s), 1 requester(s)\n"
+   }
+  },
+  {
+   "id": "A12",
+   "title": "writev, io_uring, splice, sendfile, legacy set-up",
+   "mode": "enforce",
+   "expected": "all denied (splice/sendfile fail regardless)",
+   "observed": "got-fd; write EPERM; writev EPERM; uring EPERM; splice EPERM; sendfile EPERM; legacy set-up: setup EPERM; compat ioctl: not runnable on arm64 host, hook attached; prompt: timeout",
+   "pass": true,
+   "seconds": 5.3,
+   "detail": {
+    "ops": {
+     "write": "EPERM",
+     "writev": "EPERM",
+     "uring": "EPERM",
+     "splice": "EPERM",
+     "sendfile": "EPERM"
+    }
+   }
+  },
+  {
+   "id": "A13",
+   "title": "uhid keyboard created by the attacker (also S-a)",
+   "mode": "enforce",
+   "expected": "creation denied (EPERM), prompt not approved",
+   "observed": "attacker: create EPERM; prompt: timeout",
+   "pass": true,
+   "seconds": 30.1,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "P1",
+   "title": "physical key on each hardware keyboard",
+   "mode": "enforce",
+   "expected": "approved on every keyboard",
+   "observed": "usbkbd0: approved; usbkbd1: approved; viokbd0: approved",
+   "pass": true,
+   "seconds": 26.6,
+   "detail": {
+    "usbkbd0": {
+     "event": "result",
+     "reason": "KEY_5 pressed on input166",
+     "verdict": "approved"
+    },
+    "usbkbd1": {
+     "event": "result",
+     "reason": "KEY_F1 pressed on input2817",
+     "verdict": "approved"
+    },
+    "viokbd0": {
+     "event": "result",
+     "reason": "KEY_0 pressed on input2820",
+     "verdict": "approved"
+    }
+   }
+  },
+  {
+   "id": "P2/P3",
+   "title": "allow-listed remapper (keyd): assistive vs physical prompt",
+   "mode": "enforce",
+   "expected": "assistive prompt approved; physical prompt denied",
+   "observed": "assistive: approved (KEY_F8 pressed on input2823); physical: denied (input2820 is grabbed by a process this prompt does not accept)",
+   "pass": true,
+   "seconds": 3.7,
+   "detail": {
+    "assistive": {
+     "event": "result",
+     "reason": "KEY_F8 pressed on input2823",
+     "verdict": "approved"
+    },
+    "physical": {
+     "event": "result",
+     "reason": "input2820 is grabbed by a process this prompt does not accept",
+     "verdict": "denied"
+    }
+   }
+  },
+  {
+   "id": "P4",
+   "title": "wrong key, timeout, concurrent prompt",
+   "mode": "enforce",
+   "expected": "wrong key ignored -> timeout; second prompt refused (busy)",
+   "observed": "wrong key then silence: timeout; concurrent request: error (busy)",
+   "pass": true,
+   "seconds": 5.2,
+   "detail": {}
+  },
+  {
+   "id": "S-b",
+   "title": "write to /dev/input/eventN of a hardware keyboard",
+   "mode": "enforce",
+   "expected": "injection counted; prompt rejects the device",
+   "observed": "attacker: injected 5; inject_count 0 -> 6; physical press: sent; prompt: denied (record of input2821 changed)",
+   "pass": true,
+   "seconds": 2.0,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "record of input2821 changed",
+     "verdict": "denied"
+    }
+   }
+  },
+  {
+   "id": "R2",
+   "title": "LD_PRELOAD into an allow-listed tool",
+   "mode": "enforce",
+   "expected": "injection SUCCEEDS (residual risk); physical prompt still not approved",
+   "observed": "attacker: evil: created; evil: wrote; prompt: timeout",
+   "pass": true,
+   "seconds": 5.9,
+   "detail": {
+    "result": {
+     "event": "result",
+     "reason": "no approval before the timeout",
+     "verdict": "timeout"
+    }
+   }
+  },
+  {
+   "id": "R3",
+   "title": "hijacked requester (LD_PRELOAD)",
+   "mode": "enforce",
+   "expected": "attacker is accepted as the requester: SUCCEEDS (residual risk)",
+   "observed": "provd answered the hijacked requester with: challenge",
+   "pass": true,
+   "seconds": 1.1,
+   "detail": {
+    "raw": "evil: reply {\"type\":\"challenge\",\"key\":\"KEY_4\",\"timeout_ms\":4000}\n"
+   }
+  }
+ ]
+}

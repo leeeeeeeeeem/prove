@@ -1,0 +1,118 @@
+== mode: audit
+PASS  A1     uinput keyboard types the challenge key
+        expected: injection succeeds (baseline), prompt not approved
+        observed: attacker: created 9040; wrote; prompt: timeout
+PASS  A2     uinput keyboard with the identity of a real USB keyboard
+        expected: classed uinput (never hardware), prompt not approved
+        observed: attacker: created 9131 wrote; class: ['uinput']; prompt: timeout
+PASS  A3     XTest key (xdotool) at the prompt
+        expected: injection not blocked, prompt not approved
+        observed: xdotool: sent; prompt: timeout
+PASS  A4     Wayland virtual keyboard (wtype) at the prompt
+        expected: injection not blocked, prompt not approved
+        observed: wtype: sent; prompt: timeout
+PASS  A5     fd passing from an allow-listed helper
+        expected: write succeeds (baseline), prompt not approved
+        observed: attacker: got-fd; write OK; prompt: timeout
+PASS  A6     device created before provd starts
+        expected: classed preexisting, prompt not approved
+        observed: class: ['preexisting']; attacker: wrote; prompt: timeout
+PASS  A7     device creation racing prompt set-up
+        expected: no prompt approved
+        observed: attacker: race created=147 denied=0; prompts: ['timeout', 'timeout', 'timeout']
+PASS  A8     attacker holds EVIOCGRAB on the keyboards
+        expected: prompt denied even for a physical key
+        observed: attacker: grabbed 5; prompt: denied (input1 is grabbed by a process this prompt does not accept)
+PASS  A9     non-listed requester / result forgery
+        expected: request rejected; socket cannot be replaced
+        observed: reply: error (requester is not authorised); unlink PermissionError; create PermissionError
+PASS  A10    kill provd, then inject
+        expected: consent fails closed (injection allowed as in baseline)
+        observed: provd: dead; attacker: created 9335; wrote; prompt: error
+PASS  A11    replace an allow-listed binary
+        expected: replacement impossible; writable entry rejected
+        observed: user replace: blocked; writable entry: rejected; its use: created 3; wrote
+PASS  A12    writev, io_uring, splice, sendfile, legacy set-up
+        expected: write, writev, io_uring succeed (baseline); splice/sendfile EINVAL
+        observed: got-fd; write OK; writev OK; uring OK; splice EINVAL; sendfile EINVAL; legacy set-up: created 9396; compat ioctl: not runnable on arm64 host, hook attached; prompt: timeout
+PASS  A13    uhid keyboard created by the attacker (also S-a)
+        expected: classed uhid with the attacker as creator, prompt not approved
+        observed: class: uhid; creator: python3(9408), attacker pid 9408; prompt: timeout
+PASS  P1     physical key on each hardware keyboard
+        expected: approved on every keyboard
+        observed: usbkbd0: approved; usbkbd1: approved; viokbd0: approved
+PASS  P2/P3  allow-listed remapper (keyd): assistive vs physical prompt
+        expected: assistive prompt approved; physical prompt denied
+        observed: assistive: approved (KEY_0 pressed on input167); physical: denied (input163 is grabbed by a process this prompt does not accept)
+PASS  P4     wrong key, timeout, concurrent prompt
+        expected: wrong key ignored -> timeout; second prompt refused (busy)
+        observed: wrong key then silence: timeout; concurrent request: error (busy)
+PASS  S-b    write to /dev/input/eventN of a hardware keyboard
+        expected: injection counted; prompt rejects the device
+        observed: attacker: injected 5; inject_count 0 -> 6; physical press: not needed; prompt: denied (record of input165 changed)
+PASS  R2     LD_PRELOAD into an allow-listed tool
+        expected: injection SUCCEEDS (residual risk); physical prompt still not approved
+        observed: attacker: evil: created; evil: wrote; prompt: timeout
+PASS  R3     hijacked requester (LD_PRELOAD)
+        expected: attacker is accepted as the requester: SUCCEEDS (residual risk)
+        observed: provd answered the hijacked requester with: challenge
+== mode: enforce
+PASS  A1     uinput keyboard types the challenge key
+        expected: creation denied (EPERM), prompt not approved
+        observed: attacker: create EPERM; prompt: timeout
+PASS  A2     uinput keyboard with the identity of a real USB keyboard
+        expected: creation denied; never classed hardware
+        observed: attacker: create EPERM; class: -; prompt: timeout
+PASS  A3     XTest key (xdotool) at the prompt
+        expected: injection not blocked, prompt not approved
+        observed: xdotool: sent; prompt: timeout
+PASS  A4     Wayland virtual keyboard (wtype) at the prompt
+        expected: injection not blocked, prompt not approved
+        observed: wtype: sent; prompt: timeout
+PASS  A5     fd passing from an allow-listed helper
+        expected: write denied (EPERM), prompt not approved
+        observed: attacker: got-fd; write EPERM; prompt: timeout
+PASS  A6     device created before provd starts
+        expected: classed preexisting, write denied, prompt not approved
+        observed: class: ['preexisting']; attacker: write EPERM; prompt: timeout
+PASS  A7     device creation racing prompt set-up
+        expected: no prompt approved (all creations denied)
+        observed: attacker: race created=0 denied=2639; prompts: ['timeout', 'timeout', 'timeout']
+PASS  A8     attacker holds EVIOCGRAB on the keyboards
+        expected: prompt denied even for a physical key
+        observed: attacker: grabbed 5; prompt: denied (input163 is grabbed by a process this prompt does not accept)
+PASS  A9     non-listed requester / result forgery
+        expected: request rejected; socket cannot be replaced
+        observed: reply: error (requester is not authorised); unlink PermissionError; create PermissionError
+PASS  A10    kill provd, then inject
+        expected: injection still denied; consent fails closed
+        observed: provd: dead; attacker: create EPERM; prompt: error
+PASS  A11    replace an allow-listed binary
+        expected: replacement impossible; writable entry rejected
+        observed: user replace: blocked; writable entry: rejected; its use: create EPERM
+PASS  A12    writev, io_uring, splice, sendfile, legacy set-up
+        expected: all denied (splice/sendfile fail regardless)
+        observed: got-fd; write EPERM; writev EPERM; uring EPERM; splice EPERM; sendfile EPERM; legacy set-up: setup EPERM; compat ioctl: not runnable on arm64 host, hook attached; prompt: timeout
+PASS  A13    uhid keyboard created by the attacker (also S-a)
+        expected: creation denied (EPERM), prompt not approved
+        observed: attacker: create EPERM; prompt: timeout
+PASS  P1     physical key on each hardware keyboard
+        expected: approved on every keyboard
+        observed: usbkbd0: approved; usbkbd1: approved; viokbd0: approved
+PASS  P2/P3  allow-listed remapper (keyd): assistive vs physical prompt
+        expected: assistive prompt approved; physical prompt denied
+        observed: assistive: approved (KEY_F8 pressed on input2823); physical: denied (input2820 is grabbed by a process this prompt does not accept)
+PASS  P4     wrong key, timeout, concurrent prompt
+        expected: wrong key ignored -> timeout; second prompt refused (busy)
+        observed: wrong key then silence: timeout; concurrent request: error (busy)
+PASS  S-b    write to /dev/input/eventN of a hardware keyboard
+        expected: injection counted; prompt rejects the device
+        observed: attacker: injected 5; inject_count 0 -> 6; physical press: sent; prompt: denied (record of input2821 changed)
+PASS  R2     LD_PRELOAD into an allow-listed tool
+        expected: injection SUCCEEDS (residual risk); physical prompt still not approved
+        observed: attacker: evil: created; evil: wrote; prompt: timeout
+PASS  R3     hijacked requester (LD_PRELOAD)
+        expected: attacker is accepted as the requester: SUCCEEDS (residual risk)
+        observed: provd answered the hijacked requester with: challenge
+
+38/38 cases passed

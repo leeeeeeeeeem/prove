@@ -1,7 +1,7 @@
 # Implementation environment
 
 The environment PROVE was built and validated on (SPEC section 4). Captured from the running VM
-on 2026-11-23.
+on 2026-11-23; the recorded run of 2026-11-26 used the same guest and toolchains.
 
 ## Guest (the system under test)
 

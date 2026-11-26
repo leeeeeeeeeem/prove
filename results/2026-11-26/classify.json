@@ -1,0 +1,84 @@
+{
+ "info": {
+  "kernel": "6.12.116+deb13-arm64"
+ },
+ "seed": 20266401,
+ "uinput": 500,
+ "uhid": 100,
+ "hotplug_rounds": 10,
+ "unplug_seconds": {
+  "usbkbd0": [
+   0.3,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "usbkbd1": [
+   0.4,
+   0.3,
+   0.4,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ],
+  "viokbd0": [
+   5.4,
+   5.3,
+   5.3,
+   5.3,
+   5.3,
+   5.3,
+   5.3,
+   5.3,
+   5.3,
+   5.3
+  ],
+  "usbtablet0": [
+   0.3,
+   0.4,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3,
+   0.3
+  ]
+ },
+ "spoofed": 300,
+ "matrix": [
+  {
+   "true": "hardware",
+   "recorded": "hardware",
+   "count": 45
+  },
+  {
+   "true": "uhid",
+   "recorded": "uhid",
+   "count": 100
+  },
+  {
+   "true": "uinput",
+   "recorded": "uinput",
+   "count": 500
+  }
+ ],
+ "injected_as_hardware": 0,
+ "hardware_as_injected": 0,
+ "creator_correct": 600,
+ "creator_total": 600,
+ "stale_records": 0,
+ "errors": [],
+ "pass": true
+}

@@ -1,0 +1,23 @@
+hotplug round 1/10 done
+hotplug round 2/10 done
+hotplug round 3/10 done
+hotplug round 4/10 done
+hotplug round 5/10 done
+hotplug round 6/10 done
+hotplug round 7/10 done
+hotplug round 8/10 done
+hotplug round 9/10 done
+hotplug round 10/10 done
+
+confusion matrix (rows: true class, columns: recorded class)
+                   hardware           uinput             uhid  unknown-virtual      preexisting          missing
+hardware                 45                0                0                0                0                0
+uinput                    0              500                0                0                0                0
+uhid                      0                0              100                0                0                0
+
+injected devices classed hardware: 0
+hardware devices classed otherwise: 0
+creator attribution correct: 600/600
+synthetic devices with a copied hardware identity: 300
+stale records after teardown: 0
+PASS

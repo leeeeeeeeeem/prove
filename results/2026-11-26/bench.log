@@ -1,0 +1,66 @@
+unloaded: run 1/10 done
+unloaded: run 2/10 done
+unloaded: run 3/10 done
+unloaded: run 4/10 done
+unloaded: run 5/10 done
+unloaded: run 6/10 done
+unloaded: run 7/10 done
+unloaded: run 8/10 done
+unloaded: run 9/10 done
+unloaded: run 10/10 done
+audit: run 1/10 done
+audit: run 2/10 done
+audit: run 3/10 done
+audit: run 4/10 done
+audit: run 5/10 done
+audit: run 6/10 done
+audit: run 7/10 done
+audit: run 8/10 done
+audit: run 9/10 done
+audit: run 10/10 done
+enforce: run 1/10 done
+enforce: run 2/10 done
+enforce: run 3/10 done
+enforce: run 4/10 done
+enforce: run 5/10 done
+enforce: run 6/10 done
+enforce: run 7/10 done
+enforce: run 8/10 done
+enforce: run 9/10 done
+enforce: run 10/10 done
+
+metric                  unit        unloaded       audit     enforce  audit % enforce %
+write_devnull           ns/op          119.4       211.5       212.6   +77.1%    +78.0%
+read_devzero            ns/op          113.1       189.7       189.8   +67.7%    +67.9%
+write_uinput            ns/op          132.3       293.1       294.1  +121.5%   +122.3%
+pipe_roundtrip          ns/op        28072.2     28895.8     29042.9    +2.9%     +3.5%
+input_latency_median    ns             334.0       583.0       583.0   +74.6%    +74.6%
+register_median         ns         2381500.0   2510876.5   2590231.0    +5.4%     +8.8%
+fio_seqwrite_512        IOPS       3558803.1   2690514.3   2685646.5   -24.4%    -24.5%
+fio_seqread_512         IOPS       3820985.3   2948011.3   2930361.0   -22.8%    -23.3%
+fio_randwrite_4k        IOPS       1712114.1   1508305.7   1496310.6   -11.9%    -12.6%
+fio_randread_4k         IOPS       1723453.8   1495919.4   1492053.6   -13.2%    -13.4%
+
+per-program run time (audit):
+  dev_register         runs=101       avg=86154.7 ns
+  dev_unregister       runs=101       avg=5066.8 ns
+  grab                 runs=0         avg=None ns
+  hid_alloc            runs=0         avg=None ns
+  hid_destroy          runs=0         avg=None ns
+  inject_count         runs=0         avg=None ns
+  ioctl_guard_compat   runs=0         avg=None ns
+  ioctl_guard_native   runs=1893      avg=539.3 ns
+  release              runs=0         avg=None ns
+  write_guard          runs=1107216   avg=32.1 ns
+
+per-program run time (enforce):
+  dev_register         runs=101       avg=103658.4 ns
+  dev_unregister       runs=101       avg=7000.8 ns
+  grab                 runs=0         avg=None ns
+  hid_alloc            runs=0         avg=None ns
+  hid_destroy          runs=0         avg=None ns
+  inject_count         runs=0         avg=None ns
+  ioctl_guard_compat   runs=0         avg=None ns
+  ioctl_guard_native   runs=1894      avg=484.6 ns
+  release              runs=0         avg=None ns
+  write_guard          runs=1107220   avg=32.6 ns
