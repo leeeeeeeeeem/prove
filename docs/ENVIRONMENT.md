@@ -64,5 +64,17 @@ vm/ssh.sh '. ~/.cargo/env && cd ~/prove && cargo build && sudo scripts/install.s
 vm/ssh.sh 'cd ~/prove && sudo tests/fixtures/setup.sh'   # build C fixtures, write the test allow-list
 ```
 
+The Debian cloud image installs kernel updates on its own through unattended-upgrades, and the
+newest kernel becomes the boot default. To keep the guest on the kernel above (it stays installed
+next to any newer one), the test VM has automatic upgrades off and GRUB pinned to it:
+
+```
+sudo systemctl disable --now apt-daily.timer apt-daily-upgrade.timer unattended-upgrades.service
+# /etc/default/grub (UUID from `grep -o "gnulinux-[^']*" /boot/grub/grub.cfg`):
+GRUB_DEFAULT="gnulinux-advanced-<uuid>>gnulinux-6.12.116+deb13-arm64-advanced-<uuid>"
+sudo update-grub
+```
+
 Test entry points run from the host: `tests/run_attacks.py`, `tests/run_classify.py`,
-`tests/run_bench.py` (each takes `--out <dir>` for its local JSON output). The recorded run is in `docs/RESULTS.md`.
+`tests/run_bench.py`. Each writes JSON to `results/<date>/` (or `--out <dir>`). The recorded run is
+`results/2026-11-26/`, discussed in `docs/RESULTS.md`; `tests/summarize.py` rebuilds its tables.

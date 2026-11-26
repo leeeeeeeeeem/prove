@@ -28,6 +28,7 @@ def main():
     vm.restart_provd("audit")
     matrix = collections.Counter()   # (true class, recorded class) -> count
     errors = []
+    unplug_s = {}                    # device id -> seconds each hot-unplug took
 
     # ---- hardware set ----
     real = lambda ds: [d for d in ds if d["class"] != "preexisting" and d["name"].startswith("QEMU")]
@@ -39,7 +40,11 @@ def main():
         for dev, (driver, props) in HOTPLUG.items():
             before = {d["device"] for d in vm.devices()}
             vm.unplug(dev)
-            vm.wait_devices(lambda ds: len(real(ds)) == expected_real - 1, timeout=40)
+            # PCIe hot-unplug waits for the guest's 5 s attention-button delay and has been seen to
+            # take over 40 s under HVF; wait generously and record how long each unplug took.
+            t0 = time.time()
+            vm.wait_devices(lambda ds: len(real(ds)) == expected_real - 1, timeout=120)
+            unplug_s.setdefault(dev, []).append(round(time.time() - t0, 1))
             vm.plug(dev, driver, props)
             devs = vm.wait_devices(lambda ds: len(real(ds)) == expected_real, timeout=40)
             new = [d for d in devs if d["device"] not in before]
@@ -104,7 +109,7 @@ def main():
         os.makedirs(a.out, exist_ok=True)
         with open(os.path.join(a.out, "classify.json"), "w") as f:
             json.dump({"info": vm.info(), "seed": a.seed, "uinput": a.uinput, "uhid": a.uhid,
-                       "hotplug_rounds": a.hotplug_rounds, "spoofed": spoofed,
+                       "hotplug_rounds": a.hotplug_rounds, "unplug_seconds": unplug_s, "spoofed": spoofed,
                        "matrix": [{"true": t, "recorded": c, "count": n} for (t, c), n in sorted(matrix.items())],
                        "injected_as_hardware": injected_as_hw, "hardware_as_injected": hw_as_injected,
                        "creator_correct": creator_ok, "creator_total": creator_total,
