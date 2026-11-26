@@ -269,7 +269,7 @@ A small terminal program that sends a request, shows action + name + challenge k
 | M1 | Provenance records + audit | `provectl devices` shows correct class and creator for the 4 QEMU devices and a test uinput device; events appear in journald |
 | M2 | uinput enforcement + allow-list + pinning | Non-allow-listed creation and writes get `EPERM` in enforce mode and are only logged in audit mode; enforcement holds after `kill -9 provd` |
 | M3 | Consent contract + assistive mode | Physical key approves; uinput/XTest/Wayland keys never approve; remapper approves in assistive mode only |
-| M4 | Attack suite, classification test, benchmarks | `tests/run_attacks.py`, `tests/run_classify.py` and `tests/run_bench.py` write `results/`; tables in `docs/RESULTS.md` |
+| M4 | Attack suite, classification test, benchmarks | `tests/run_attacks.py`, `tests/run_classify.py` and `tests/run_bench.py` write `results/<date>/`; `tests/summarize.py` rebuilds the tables in `docs/RESULTS.md` |
 | S1 | uhid enforcement | Non-allow-listed uhid creation and writes get `EPERM` in enforce mode (A13) |
 | S2 | evdev-write injection counter | Writes to a hardware keyboard's evdev node are counted and the prompt refuses that device (S-b) |
 

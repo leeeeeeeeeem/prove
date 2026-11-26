@@ -8,7 +8,7 @@ import argparse, importlib.util, json, os, sys, time, traceback
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from harness import VM  # noqa: E402
+from harness import VM, default_out  # noqa: E402
 
 def load_cases():
     cases = []
@@ -28,7 +28,7 @@ NORMAL_TIMEOUT_MS = 30000
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", default=default_out())
     ap.add_argument("--mode", choices=["audit", "enforce"], action="append")
     ap.add_argument("--only", default="")
     a = ap.parse_args()

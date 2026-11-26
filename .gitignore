@@ -1,7 +1,9 @@
 target/
 vm/images/
 vm/run/
-results/
+# Test output is local, except the recorded run cited by docs/RESULTS.md and the report.
+/results/*
+!/results/2026-11-26/
 *.swp
 .DS_Store
 __pycache__/

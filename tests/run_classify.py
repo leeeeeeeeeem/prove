@@ -12,13 +12,13 @@ import argparse, collections, json, os, sys, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from harness import KEYBOARDS, VM  # noqa: E402
+from harness import KEYBOARDS, VM, default_out  # noqa: E402
 
 HOTPLUG = dict(KEYBOARDS, usbtablet0=("usb-tablet", {"bus": "xhci0.0"}))
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", default=default_out())
     ap.add_argument("--seed", type=int, default=20266401)
     ap.add_argument("--uinput", type=int, default=500)
     ap.add_argument("--uhid", type=int, default=100)

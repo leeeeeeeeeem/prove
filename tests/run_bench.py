@@ -8,7 +8,7 @@ import argparse, json, os, re, statistics, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from harness import VM  # noqa: E402
+from harness import VM, default_out  # noqa: E402
 
 B = "/usr/libexec/prove-test"
 FIO = ("fio --name=j --directory=/dev/shm --size=64M --ioengine=psync --runtime={rt} --time_based "
@@ -65,7 +65,7 @@ def summarise(samples):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", default=default_out())
     ap.add_argument("--runs", type=int, default=10)
     ap.add_argument("--quick", action="store_true")
     a = ap.parse_args()

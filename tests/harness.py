@@ -15,6 +15,10 @@ SSH_KEY = os.environ.get("SSH_KEY", os.path.expanduser("~/.ssh/id_ed25519"))
 VM_USER = "user"
 LIB = "~/prove/tests/lib"
 
+def default_out():
+    """Where the runners write their JSON unless --out is given: results/<today>/."""
+    return os.path.join(ROOT, "results", time.strftime("%Y-%m-%d"))
+
 def _key(name, code, qcode, hid, x11):
     return {"name": name, "code": code, "qcode": qcode, "hid": hid, "x11": x11}
 

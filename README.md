@@ -71,9 +71,10 @@ python3 tests/run_classify.py    # device classification
 python3 tests/run_bench.py       # overhead
 ```
 
-Each writes JSON under `results/<date>/`, which is local output and not tracked. The recorded
-results are in [docs/RESULTS.md](docs/RESULTS.md): 38 of 38 attack runs pass, no injected device is ever classed
-as hardware, and the hot path costs about 31 ns per write.
+Each writes JSON under `results/<date>/` (or `--out DIR`). Only the recorded run,
+`results/2026-11-26/`, is tracked. `python3 tests/summarize.py [DIR]` rebuilds the result tables
+from the raw JSON; it needs only Python, no VM. The recorded results are discussed in
+[docs/RESULTS.md](docs/RESULTS.md).
 
 ## Status
 
